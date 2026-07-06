@@ -1,0 +1,27 @@
+name = "sjk-web"
+main = ".open-next/worker.js"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
+
+# Sejak Next.js 16.2 + @opennextjs/cloudflare, frontend di-deploy sebagai
+# Cloudflare Worker (bukan Cloudflare Pages lagi) - lihat perubahan yang
+# dijelaskan di docs/deployment.md. Ini juga berarti frontend kini berjalan
+# di runtime Node.js Workers (nodejs_compat), bukan Edge Runtime terbatas.
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+[[services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "sjk-web"
+
+[[r2_buckets]]
+binding = "NEXT_INC_CACHE_R2_BUCKET"
+bucket_name = "sjk-web-cache"
+
+[env.staging]
+name = "sjk-web-staging"
+
+[env.production]
+name = "sjk-web-production"

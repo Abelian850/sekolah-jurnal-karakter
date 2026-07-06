@@ -48,6 +48,16 @@ npm run dev:web
 # berjalan di http://localhost:3000
 ```
 
+Ini memakai dev server Next.js biasa (paling cepat untuk iterasi harian).
+Jika suatu saat perlu menguji perilaku yang spesifik ke runtime Cloudflare
+Workers (mis. binding R2, cache OpenNext), jalankan dari `apps/web`:
+```bash
+npm run preview
+```
+Ini membangun lewat adapter OpenNext lalu menjalankannya di runtime Workers
+lokal (`wrangler dev` di balik layar) — lebih lambat dari `next dev`, jadi
+cukup dipakai sesekali untuk verifikasi, bukan untuk kerja sehari-hari.
+
 ## 6. Membuat akun admin pertama (seed manual)
 
 Sebelum modul Admin (Fase 3) tersedia, buat akun admin pertama langsung lewat `db:studio`:

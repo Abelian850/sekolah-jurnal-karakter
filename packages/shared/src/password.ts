@@ -1,13 +1,17 @@
 import { argon2id, argon2Verify } from "hash-wasm";
 
 /**
- * Hashing password dengan argon2id via WASM murni (bukan native Node addon),
- * agar bisa berjalan konsisten di dua runtime yang berbeda:
- * - apps/web: route handler Auth.js berjalan dengan `runtime = "edge"`
- * - apps/api: Cloudflare Workers (isolate V8, tanpa Node native addon)
- * Library seperti `@node-rs/argon2` TIDAK bisa dipakai di kedua runtime di
- * atas karena bergantung pada native binary. `hash-wasm` murni WASM+JS,
- * sehingga aman dipakai di packages/shared dan diimpor oleh keduanya.
+ * Hashing password dengan argon2id via WASM murni (bukan native Node addon).
+ *
+ * Catatan pasca-migrasi ke @opennextjs/cloudflare (lihat docs/deployment.md):
+ * apps/web kini berjalan di runtime Node.js penuh (nodejs_compat), sehingga
+ * secara teknis native addon seperti `@node-rs/argon2` sudah bisa dipakai
+ * lagi di sana. Tapi `hash-wasm` tetap dipertahankan dengan sengaja, karena:
+ * 1. apps/api (Cloudflare Workers untuk Hono) TETAP tidak mendukung native
+ *    addon - jadi tetap butuh implementasi WASM/pure-JS di sana.
+ * 2. Memakai SATU implementasi yang sama di kedua sisi (packages/shared)
+ *    lebih mudah dipelihara daripada dua implementasi berbeda yang harus
+ *    menghasilkan hash yang saling kompatibel.
  */
 
 const SALT_LENGTH = 16;

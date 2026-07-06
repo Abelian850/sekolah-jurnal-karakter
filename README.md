@@ -8,6 +8,12 @@ Aplikasi jurnal karakter dan monitoring peserta didik berbasis relasi **Guru Wal
 - [x] **Fase 2** — Setup monorepo, konfigurasi GitHub/Cloudflare/Neon/Auth.js, CI/CD
 - [x] **Fase 3** — Autentikasi & RBAC penuh + Dashboard Admin (Sekolah, Tahun Pelajaran, Semester)
 - [x] **Fase 4** — Kelola Guru, Guru Wali, Peserta Didik, Orang Tua + Bulk Import/Export Excel
+
+> ⚠️ **Pembaruan pasca-Fase 4:** Next.js dinaikkan dari 15.0.0 ke **16.2.10 LTS**
+> (menambal kerentanan kritis CVE-2025-66478), dan deploy frontend berpindah
+> dari Cloudflare Pages ke **Cloudflare Workers** via `@opennextjs/cloudflare`
+> (`@cloudflare/next-on-pages` sudah deprecated). Detail lengkap di
+> `docs/deployment.md`.
 - [ ] Fase 5 — Modul Jurnal Harian
 - [ ] Fase 6 — Validasi & Penilaian Karakter + Notifikasi
 - [ ] Fase 7 — Dashboard Kepala Sekolah & Orang Tua
@@ -25,7 +31,7 @@ Aplikasi jurnal karakter dan monitoring peserta didik berbasis relasi **Guru Wal
 | ORM | Drizzle ORM |
 | Storage | Cloudflare R2 |
 | Auth | Auth.js (Credentials + JWT) |
-| Hosting | Cloudflare Pages (FE) + Cloudflare Workers (BE) |
+| Hosting | Cloudflare Workers (FE via OpenNext, BE via Hono) |
 | CI/CD | GitHub Actions |
 
 Alasan lengkap pemilihan setiap teknologi (termasuk mengapa Neon dipilih alih-alih Supabase) ada di dokumen Fase 1.

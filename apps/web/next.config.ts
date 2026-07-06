@@ -1,18 +1,19 @@
 import type { NextConfig } from "next";
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 const nextConfig: NextConfig = {
-  // Output standalone dibutuhkan agar kompatibel dengan adapter
-  // @cloudflare/next-on-pages saat deploy ke Cloudflare Pages.
   reactStrictMode: true,
-  experimental: {
-    // Diperlukan agar Auth.js (next-auth v5) berjalan di edge runtime Cloudflare.
-    serverActions: { bodySizeLimit: "4mb" },
-  },
   images: {
-    // Foto disajikan dari Cloudflare R2 (bukan next/image default loader),
-    // supaya tidak menambah beban optimasi gambar server-side yang mahal di edge.
+    // Foto disajikan dari Cloudflare R2 (bukan lewat Next Image Optimization
+    // bawaan), supaya tidak perlu mengaktifkan binding Cloudflare Images
+    // terpisah untuk kasus penggunaan aplikasi ini.
     unoptimized: true,
   },
 };
+
+// Diperlukan agar `next dev` bisa memakai binding Cloudflare (R2, dsb.)
+// secara lokal lewat @opennextjs/cloudflare. Tidak berpengaruh saat
+// production build/deploy (hanya aktif di dev server).
+initOpenNextCloudflareForDev();
 
 export default nextConfig;

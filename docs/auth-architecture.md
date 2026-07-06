@@ -40,6 +40,25 @@ frontend dan backend adalah dua layanan/runtime yang berbeda.
 6. Middleware RBAC (middleware/rbac.ts) mengecek permission sesuai role
 ```
 
+## Catatan status Auth.js (per Juli 2026)
+
+Auth.js v5 (`next-auth`) yang dipakai proyek ini sejak akhir 2025 sudah
+dalam **mode security-patch** — tim Auth.js kini juga mengelola **Better
+Auth**, dan mengarahkan proyek baru ke sana. Auth.js v5 tetap menerima
+patch keamanan dan dipakai luas di production, jadi **belum ada alasan
+mendesak untuk migrasi** di proyek ini. Ini dicatat secara transparan
+sebagai bahan pertimbangan saat Fase 9 (hardening keamanan) — migrasi ke
+Better Auth bisa dievaluasi di sana jika dianggap perlu, dengan trade-off
+yang dijelaskan dulu sebelum dieksekusi (sesuai prinsip proyek ini).
+
+Terkait CVE-2025-29927 (celah bypass middleware Next.js lewat pemalsuan
+header `x-middleware-subrequest`): proyek ini **sudah aman** dari kelas
+kerentanan ini sejak Fase 3, karena `middleware.ts` sengaja tidak dijadikan
+satu-satunya lapisan proteksi — setiap `layout.tsx` per-role memanggil
+`requireRole()` yang mengecek ulang sesi di server, terlepas dari apakah
+middleware berhasil dilewati atau tidak. Lihat komentar di
+`apps/web/middleware.ts`.
+
 ## Yang wajib konsisten di kedua sisi
 
 - `AUTH_SECRET` harus **identik** di `apps/web/.env.local` dan secret Cloudflare Workers.

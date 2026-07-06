@@ -20,9 +20,12 @@ npx wrangler secret put FRONTEND_ORIGIN --env production
 
 Binding non-secret (R2 bucket) sudah didefinisikan di `wrangler.toml` sebagai `JOURNAL_BUCKET`.
 
-## apps/web (Cloudflare Pages)
+## apps/web (Cloudflare Workers, via OpenNext adapter)
 
-Di-set lewat dashboard Cloudflare Pages → Settings → Environment Variables, atau via GitHub Secrets yang diteruskan workflow `deploy-web.yml`:
+Di-set lewat `wrangler secret put <NAMA>` di folder `apps/web` (sama polanya
+dengan apps/api sejak migrasi dari Cloudflare Pages ke Workers — lihat
+catatan di `docs/deployment.md`), atau lewat GitHub Secrets yang diteruskan
+workflow `deploy-web.yml`:
 
 | Nama | Keterangan |
 |---|---|
@@ -38,7 +41,7 @@ Di-set lewat dashboard Cloudflare Pages → Settings → Environment Variables, 
 | `CLOUDFLARE_ACCOUNT_ID` | Dashboard Cloudflare → Workers & Pages → Account ID (kanan atas) |
 | `DATABASE_URL` | Connection string Neon (project production) |
 | `AUTH_SECRET` | String acak, sama dengan yang dipakai di kedua environment |
-| `FRONTEND_ORIGIN` | URL Cloudflare Pages production |
+| `FRONTEND_ORIGIN` | URL Worker frontend production, contoh `https://sjk-web-production.<subdomain>.workers.dev` |
 | `NEXT_PUBLIC_API_URL` | URL Cloudflare Workers production |
 
 **Prinsip keamanan:** tidak ada satupun nilai di atas yang boleh muncul di kode yang di-commit. Semua lewat secrets/`.dev.vars`/`.env.local` yang sudah ada di `.gitignore`.

@@ -21,6 +21,13 @@ melihat ERD/use case/flowchart/arsitektur.
 
 ## Fase 2 — Memverifikasi infrastruktur dasar menyala
 
+> ⚠️ **Update:** setelah Fase 4, `apps/web` bermigrasi dari
+> `@cloudflare/next-on-pages` (deprecated) ke `@opennextjs/cloudflare`, dan
+> Next.js dinaikkan ke versi 16.2.10 LTS (menambal CVE-2025-66478). Langkah
+> di bawah ini tetap sama persis untuk `npm run dev:web` / `npm run dev:api`
+> — perubahan hanya terasa saat deploy ke Cloudflare (lihat
+> `docs/deployment.md`).
+
 Belum ada fitur bisnis. Tujuan Fase 2 hanya membuktikan Next.js, Hono, dan
 Neon bisa saling terhubung.
 
