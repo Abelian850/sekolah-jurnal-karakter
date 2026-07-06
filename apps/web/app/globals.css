@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+/* Utility glassmorphism ringan - dipakai konsisten di seluruh dashboard (Fase 3+) */
+.glass-panel {
+  @apply border border-white/20 bg-white/60 backdrop-blur-md dark:border-white/10 dark:bg-slate-900/60;
+}

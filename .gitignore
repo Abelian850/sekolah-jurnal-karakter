@@ -1,0 +1,37 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js
+.next/
+.vercel/
+out/
+
+# Wrangler / Cloudflare
+.wrangler/
+.dev.vars
+
+# Environment
+.env
+.env.local
+.env*.local
+
+# Build
+dist/
+build/
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Drizzle (kecuali folder migrasi generate yang WAJIB di-commit)
+drizzle/meta/_journal.json.bak

@@ -1,0 +1,34 @@
+name = "sjk-api"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Free tier Workers: 100.000 request/hari, reset 00:00 UTC.
+# Batas ini didokumentasikan di docs/deployment.md.
+
+[observability]
+enabled = true
+
+# Rate limiting sederhana berbasis binding, dipakai di endpoint login & submit jurnal.
+# Aktifkan setelah membuat namespace di dashboard Cloudflare, lalu isi id di bawah.
+# [[unsafe.bindings]]
+# name = "RATE_LIMITER"
+# type = "ratelimit"
+# namespace_id = "1001"
+# simple = { limit = 20, period = 60 }
+
+# Secrets (JANGAN ditaruh di sini). Set lewat:
+#   wrangler secret put DATABASE_URL
+#   wrangler secret put AUTH_SECRET
+#   wrangler secret put R2_ACCOUNT_ID
+# dst. Lihat docs/environment-variables.md untuk daftar lengkap.
+
+[[r2_buckets]]
+binding = "JOURNAL_BUCKET"
+bucket_name = "sjk-journal-photos"
+
+[env.staging]
+name = "sjk-api-staging"
+
+[env.production]
+name = "sjk-api-production"

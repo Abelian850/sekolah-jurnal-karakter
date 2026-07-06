@@ -1,0 +1,6 @@
+# Salin file ini menjadi .dev.vars (JANGAN commit .dev.vars ke git)
+# Dipakai oleh `wrangler dev` untuk simulasi environment lokal.
+
+DATABASE_URL="postgresql://user:password@ep-xxxx.region.aws.neon.tech/sjk?sslmode=require"
+AUTH_SECRET="isi-dengan-string-acak-panjang-minimal-32-karakter"
+FRONTEND_ORIGIN="http://localhost:3000"

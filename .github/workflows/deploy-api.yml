@@ -1,0 +1,50 @@
+name: Deploy API (Cloudflare Workers)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "packages/shared/**"
+      - ".github/workflows/deploy-api.yml"
+
+jobs:
+  migrate-and-deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Migrasi dijalankan SEBELUM deploy, agar kode baru tidak pernah
+      # berjalan melawan skema database lama.
+      - name: Jalankan migrasi database (Neon)
+        run: npm run db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Deploy ke Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/api
+          command: deploy --env production
+
+      - name: Set secrets di Workers (idempotent)
+        working-directory: apps/api
+        run: |
+          echo "${{ secrets.DATABASE_URL }}" | npx wrangler secret put DATABASE_URL --env production
+          echo "${{ secrets.AUTH_SECRET }}" | npx wrangler secret put AUTH_SECRET --env production
+          echo "${{ secrets.FRONTEND_ORIGIN }}" | npx wrangler secret put FRONTEND_ORIGIN --env production
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
