@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { sql } from "drizzle-orm";
 import type { Env, Variables } from "../index";
 
 export const healthRoute = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -12,7 +13,7 @@ export const healthRoute = new Hono<{ Bindings: Env; Variables: Variables }>();
 healthRoute.get("/", async (c) => {
   try {
     const db = c.get("db");
-    await db.execute("select 1");
+    await db.execute(sql`select 1`);
     return c.json({ status: "ok", database: "connected", timestamp: new Date().toISOString() });
   } catch (err) {
     return c.json(

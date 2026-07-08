@@ -164,6 +164,8 @@ teachersRoute.post(
   }
 );
 
+teachersRoute.patch(
+  "/:id/toggle-wali",
   authMiddleware,
   requirePermission(PERMISSIONS.TEACHER_MANAGE),
   async (c) => {

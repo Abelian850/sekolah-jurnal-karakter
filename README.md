@@ -14,7 +14,7 @@ Aplikasi jurnal karakter dan monitoring peserta didik berbasis relasi **Guru Wal
 > dari Cloudflare Pages ke **Cloudflare Workers** via `@opennextjs/cloudflare`
 > (`@cloudflare/next-on-pages` sudah deprecated). Detail lengkap di
 > `docs/deployment.md`.
-- [ ] Fase 5 — Modul Jurnal Harian
+- [x] **Fase 5** — Modul Jurnal Harian (template jurnal oleh Admin, pengisian & kirim jurnal oleh Peserta Didik, riwayat)
 - [ ] Fase 6 — Validasi & Penilaian Karakter + Notifikasi
 - [ ] Fase 7 — Dashboard Kepala Sekolah & Orang Tua
 - [ ] Fase 8 — Landing Page & polish UI/UX
@@ -66,5 +66,4 @@ npm run dev:web   # terminal 2
 - [Bulk Import & Export Excel](./docs/bulk-import-export.md)
 - [Setup Lokal](./docs/setup-lokal.md)
 - [Environment Variables](./docs/environment-variables.md)
-- [Deployment & CI/CD](./docs/deployment.md)
-- [Migrasi & Backup Database](./docs/database-migration.md)
+- [Deployment & CI

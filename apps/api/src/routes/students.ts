@@ -25,6 +25,32 @@ const studentFields = {
 
 const createStudentSchema = z.object({ schoolId: z.string().uuid(), ...studentFields });
 
+/**
+ * GET /students/me - profil siswa milik akun yang sedang login.
+ * Hanya authMiddleware, tanpa gerbang permission: endpoint ini semata
+ * me-resolve baris students berdasarkan users.id dari JWT, dan setiap
+ * handler di journals.ts tetap menurunkan kepemilikan dari database
+ * sendiri, jadi tidak ada data siswa lain yang bisa bocor dari sini.
+ */
+studentsRoute.get("/me", authMiddleware, async (c) => {
+  const db = c.get("db");
+  const user = c.get("user");
+
+  const [student] = await db.select().from(students).where(eq(students.userId, user.sub));
+  if (!student) {
+    return c.json(
+      {
+        error: "not_found",
+        message: "Profil peserta didik untuk akun ini tidak ditemukan. Hubungi Admin sekolah.",
+        statusCode: 404,
+      },
+      404
+    );
+  }
+
+  return c.json({ data: student });
+});
+
 studentsRoute.get(
   "/",
   authMiddleware,

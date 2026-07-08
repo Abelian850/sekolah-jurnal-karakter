@@ -12,6 +12,8 @@ import { teachersRoute } from "./routes/teachers";
 import { studentsRoute } from "./routes/students";
 import { parentsRoute } from "./routes/parents";
 import { teacherStudentRoute } from "./routes/teacher-student";
+import { journalTemplatesRoute } from "./routes/journal-templates";
+import { journalsRoute } from "./routes/journals";
 import type { AppJwtPayload } from "@sjk/shared";
 
 /**
@@ -67,6 +69,8 @@ app.route("/teachers", teachersRoute);
 app.route("/students", studentsRoute);
 app.route("/parents", parentsRoute);
 app.route("/teacher-student", teacherStudentRoute);
+app.route("/journal-templates", journalTemplatesRoute);
+app.route("/journals", journalsRoute);
 
 // ---------- Error handler global ----------
 app.onError((err, c) => {

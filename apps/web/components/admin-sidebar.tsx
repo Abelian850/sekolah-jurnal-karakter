@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/admin/siswa", label: "Peserta Didik" },
   { href: "/dashboard/admin/orang-tua", label: "Orang Tua" },
   { href: "/dashboard/admin/penugasan-guru-wali", label: "Penugasan Guru Wali" },
+  { href: "/dashboard/admin/jurnal-template", label: "Template Jurnal" },
 ];
 
 export function AdminSidebar() {

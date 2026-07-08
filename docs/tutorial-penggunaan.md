@@ -155,3 +155,45 @@ Ini fitur inti aplikasi. Sidebar → **Penugasan Guru Wali**:
 5. Ulangi untuk siswa lain. Satu Guru Wali bisa dipilih berkali-kali untuk
    siswa yang berbeda-beda, termasuk siswa dari kelas dan angkatan yang
    berbeda (VII, VIII, IX sekaligus) — sesuai konsep Guru Wali di proyek ini.
+
+---
+
+## Fase 5 — Modul Jurnal Harian
+
+> Prasyarat: Tahun Pelajaran **aktif**, Semester **aktif** (Fase 3), dan
+> minimal satu akun Peserta Didik (Fase 4). Tanpa ketiganya, siswa akan
+> melihat pesan "Hubungi Admin sekolah" saat mencoba membuat jurnal.
+
+### Admin — Membuat Template Jurnal
+
+Template menentukan item apa saja yang diisi siswa setiap hari.
+
+1. Login sebagai **Admin** → Sidebar → **Template Jurnal** → **+ Buat Template**.
+2. Pilih Sekolah, beri nama (contoh: `Jurnal Karakter Harian 2026/2027`).
+3. Tambahkan item satu per satu. Setiap item punya **tipe**:
+   - **Checklist** — siswa memilih selesai / belum / sebagian (contoh: *Sholat Subuh*).
+   - **Waktu** — siswa mencatat jam pelaksanaan (contoh: *Jam bangun pagi*).
+   - **Catatan** — teks bebas (contoh: *Kegiatan membantu orang tua*).
+   - **Foto** — tautan URL bukti foto.
+4. Simpan. Pastikan template berstatus **Aktif** — hanya satu template aktif
+   per sekolah yang dipakai saat siswa membuat jurnal baru.
+5. Template bisa diubah (nama, item, status aktif) dari daftar Template
+   Jurnal selama diperlukan. Item template yang sudah terpakai di jurnal
+   siswa tidak bisa dihapus (dilindungi sistem).
+
+### Peserta Didik — Mengisi Jurnal Harian
+
+1. Login sebagai **Peserta Didik** → menu **Jurnal Hari Ini**.
+2. Klik **Buat Jurnal Hari Ini** — sistem menyalin semua item dari template
+   aktif. Satu siswa hanya bisa punya **satu jurnal per tanggal**.
+3. Isi setiap item sesuai tipenya (checklist / jam / catatan / URL foto).
+   Setiap perubahan tersimpan per item, jadi aman mengisi bertahap sepanjang hari.
+4. Setelah semua terisi, klik **Kirim Jurnal**. Status berubah menjadi
+   **Terkirim** dan jurnal **tidak bisa diubah lagi** — menunggu verifikasi
+   Guru Wali (Fase 6).
+
+### Peserta Didik — Melihat Riwayat
+
+Menu **Riwayat Jurnal** menampilkan semua jurnal terurut dari terbaru,
+dengan badge status: Draf / Terkirim / Disetujui / Ditolak. Klik salah satu
+untuk melihat detail isiannya.

@@ -36,3 +36,7 @@ Thumbs.db
 
 # Drizzle (kecuali folder migrasi generate yang WAJIB di-commit)
 drizzle/meta/_journal.json.bak
+
+# TypeScript incremental build & tsconfig sandbox (artefak typecheck lokal/CI)
+*.tsbuildinfo
+tsconfig.sandbox.json

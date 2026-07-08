@@ -87,7 +87,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!row || !row.isActive) return null;
 
-import { verifyPassword } from "@sjk/shared";
         const passwordValid = await verifyPassword(password, row.passwordHash);
         if (!passwordValid) return null;
 
