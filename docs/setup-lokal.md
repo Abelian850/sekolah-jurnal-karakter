@@ -29,8 +29,13 @@ Karena ini monorepo npm workspaces, satu `npm install` di root sudah menginstal 
 
 ```bash
 npm run db:generate   # generate file migrasi SQL dari schema.ts
-DATABASE_URL="<connection-string-neon>" npm run db:migrate
+npm run db:migrate
 ```
+
+> Skrip ini membaca `DATABASE_URL` otomatis dari `apps/api/.dev.vars`
+> (atau `apps/web/.env.local`), jadi tidak perlu set variabel manual -
+> berlaku sama di Windows cmd/PowerShell maupun bash. Di CI, environment
+> variable `DATABASE_URL` dari GitHub Secrets yang dipakai.
 
 ## 4. Jalankan backend (Hono di Workers, lokal)
 
