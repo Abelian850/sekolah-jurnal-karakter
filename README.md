@@ -15,7 +15,7 @@ Aplikasi jurnal karakter dan monitoring peserta didik berbasis relasi **Guru Wal
 > (`@cloudflare/next-on-pages` sudah deprecated). Detail lengkap di
 > `docs/deployment.md`.
 - [x] **Fase 5** — Modul Jurnal Harian (template jurnal oleh Admin, pengisian & kirim jurnal oleh Peserta Didik, riwayat)
-- [ ] Fase 6 — Validasi & Penilaian Karakter + Notifikasi
+- [x] **Fase 6** — Validasi & Penilaian Karakter oleh Guru Wali (setujui/revisi/tolak + nilai 1-100) + Notifikasi in-app
 - [ ] Fase 7 — Dashboard Kepala Sekolah & Orang Tua
 - [ ] Fase 8 — Landing Page & polish UI/UX
 - [ ] Fase 9 — Audit log, backup/restore, hardening keamanan

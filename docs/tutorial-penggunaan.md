@@ -197,3 +197,50 @@ Template menentukan item apa saja yang diisi siswa setiap hari.
 Menu **Riwayat Jurnal** menampilkan semua jurnal terurut dari terbaru,
 dengan badge status: Draf / Terkirim / Disetujui / Ditolak. Klik salah satu
 untuk melihat detail isiannya.
+
+---
+
+## Fase 6 — Validasi & Penilaian Karakter + Notifikasi
+
+> Prasyarat: jalankan migrasi database terbaru dulu (`npm run db:migrate`,
+> perlu `DATABASE_URL`) karena Fase 6 menambah nilai enum baru (`revisi`)
+> pada tipe notifikasi. Selain itu perlu: Guru Wali yang sudah ditugaskan ke
+> siswa (Fase 4), dan siswa yang sudah mengirim jurnal (Fase 5).
+
+### Guru Wali — Memverifikasi Jurnal
+
+1. Login sebagai **Guru Wali** → tab **Menunggu Verifikasi** menampilkan
+   semua jurnal siswa binaan yang sudah dikirim, terlama dulu.
+2. Klik **Periksa** pada salah satu jurnal untuk melihat seluruh isiannya.
+3. Pilih salah satu keputusan:
+   - **Setujui** — jurnal benar dan lengkap. **Nilai Karakter (1-100) wajib
+     diisi**; catatan apresiasi opsional. Keputusan ini final.
+   - **Minta Revisi** — ada yang perlu diperbaiki. **Catatan wajib diisi**
+     (jelaskan apa yang salah). Jurnal kembali menjadi draf di sisi siswa
+     agar bisa diperbaiki dan dikirim ulang, lalu muncul lagi di daftar
+     Menunggu Verifikasi.
+   - **Tolak** — jurnal tidak dapat diterima. **Catatan wajib diisi**.
+     Keputusan ini final; siswa tidak bisa mengubahnya lagi.
+4. Tab **Riwayat Verifikasi** menampilkan 100 keputusan terakhir Anda
+   beserta nilai yang diberikan.
+
+Keamanan: Guru Wali hanya bisa melihat dan memverifikasi jurnal milik siswa
+binaan **aktif**-nya — dicek ulang di server lewat relasi penugasan, bukan
+dari data yang dikirim browser.
+
+### Peserta Didik — Menerima Hasil & Merevisi
+
+- Hasil verifikasi tampil di **Jurnal Hari Ini** dan detail **Riwayat
+  Jurnal**: nilai karakter + catatan (jika disetujui), alasan (jika ditolak).
+- Jika Guru Wali meminta **revisi**, jurnal otomatis kembali menjadi draf
+  dengan kotak peringatan berisi catatan guru. Perbaiki isian yang diminta,
+  lalu klik **Kirim Jurnal** lagi.
+
+### Notifikasi
+
+Setiap keputusan Guru Wali otomatis membuat notifikasi untuk **siswa** dan
+**semua orang tua yang tertaut** ke siswa itu (orang tua akan melihatnya di
+dashboard mereka pada Fase 7).
+
+- Siswa: menu **Notifikasi** (ada badge merah jumlah belum dibaca di menu).
+- Klik **Tandai semua terbaca** untuk membersihkan badge.

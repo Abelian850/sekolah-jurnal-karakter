@@ -11,6 +11,12 @@ interface Journal {
   submittedAt: string | null;
 }
 
+interface Verification {
+  status: "disetujui" | "ditolak" | "revisi";
+  note: string | null;
+  characterScore: number | null;
+}
+
 const STATUS_LABELS: Record<Journal["status"], string> = {
   draft: "Draf",
   submitted: "Terkirim - menunggu verifikasi Guru Wali",
@@ -21,12 +27,18 @@ const STATUS_LABELS: Record<Journal["status"], string> = {
 export default async function JurnalHariIniPage() {
   const today = getTodayDateWIB();
 
-  let data: { journal: Journal; items: JournalItemData[] } | null = null;
+  let data: {
+    journal: Journal;
+    items: JournalItemData[];
+    verification: Verification | null;
+  } | null = null;
   let profileMissing = false;
   try {
-    data = await apiFetch<{ journal: Journal; items: JournalItemData[] } | null>(
-      `/journals/today?date=${today}`
-    );
+    data = await apiFetch<{
+      journal: Journal;
+      items: JournalItemData[];
+      verification: Verification | null;
+    } | null>(`/journals/today?date=${today}`);
   } catch (err) {
     if (err instanceof ApiRequestError && err.statusCode === 404) {
       profileMissing = true;
@@ -34,6 +46,8 @@ export default async function JurnalHariIniPage() {
       throw err;
     }
   }
+
+  const needsRevision = data?.journal.status === "draft" && data.verification?.status === "revisi";
 
   return (
     <div className="glass-panel rounded-2xl p-6">
@@ -56,12 +70,39 @@ export default async function JurnalHariIniPage() {
           </form>
         </div>
       ) : data.journal.status === "draft" ? (
-        <JournalItemsForm journalId={data.journal.id} items={data.items} />
+        <div>
+          {needsRevision && (
+            <div className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+              <p className="font-medium">Guru Wali meminta revisi jurnal ini.</p>
+              {data.verification?.note && (
+                <p className="mt-1 whitespace-pre-wrap">{data.verification.note}</p>
+              )}
+              <p className="mt-1 text-xs">Perbaiki isianmu di bawah, lalu kirim ulang.</p>
+            </div>
+          )}
+          <JournalItemsForm journalId={data.journal.id} items={data.items} />
+        </div>
       ) : (
         <div>
           <p className="mb-4 inline-block rounded-full bg-green-100 px-3 py-1 text-xs text-green-700 dark:bg-green-900/40 dark:text-green-400">
             {STATUS_LABELS[data.journal.status]}
           </p>
+          {data.journal.status === "approved" && data.verification && (
+            <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-300">
+              {data.verification.characterScore != null && (
+                <p className="font-medium">Nilai karakter: {data.verification.characterScore}</p>
+              )}
+              {data.verification.note && (
+                <p className="mt-1 whitespace-pre-wrap">{data.verification.note}</p>
+              )}
+            </div>
+          )}
+          {data.journal.status === "rejected" && data.verification?.note && (
+            <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-300">
+              <p className="font-medium">Alasan penolakan:</p>
+              <p className="mt-1 whitespace-pre-wrap">{data.verification.note}</p>
+            </div>
+          )}
           <JournalItemsView items={data.items} />
         </div>
       )}

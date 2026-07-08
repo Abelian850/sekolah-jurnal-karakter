@@ -8,6 +8,13 @@
       "when": 1783489828444,
       "tag": "0000_rapid_smiling_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783516549652,
+      "tag": "0001_common_freak",
+      "breakpoints": true
     }
   ]
 }

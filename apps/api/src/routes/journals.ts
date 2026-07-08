@@ -13,6 +13,7 @@ import {
   journalTemplateItems,
   academicYears,
   semesters,
+  verifications,
 } from "../db/schema";
 import type { Database } from "../db/client";
 import type { Env, Variables } from "../index";
@@ -112,6 +113,19 @@ async function listJournalItems(db: Database, journalId: string) {
     .orderBy(asc(journalTemplateItems.orderIndex));
 }
 
+/**
+ * Hasil verifikasi Guru Wali untuk satu jurnal (atau null). Disertakan di
+ * respons detail jurnal agar siswa bisa melihat nilai karakter & catatan,
+ * termasuk catatan revisi saat jurnal dikembalikan menjadi draft (Fase 6).
+ */
+async function findVerification(db: Database, journalId: string) {
+  const [verification] = await db
+    .select()
+    .from(verifications)
+    .where(eq(verifications.journalId, journalId));
+  return verification ?? null;
+}
+
 const notFoundStudent = {
   error: "not_found",
   message: "Profil peserta didik untuk akun ini tidak ditemukan. Hubungi Admin sekolah.",
@@ -153,7 +167,8 @@ journalsRoute.get(
     if (!journal) return c.json({ data: null });
 
     const items = await listJournalItems(db, journal.id);
-    return c.json({ data: { journal, items } });
+    const verification = await findVerification(db, journal.id);
+    return c.json({ data: { journal, items, verification } });
   }
 );
 
@@ -183,7 +198,8 @@ journalsRoute.post(
       .where(and(eq(journals.studentId, student.id), eq(journals.journalDate, journalDate)));
     if (existing) {
       const items = await listJournalItems(db, existing.id);
-      return c.json({ data: { journal: existing, items } });
+      const verification = await findVerification(db, existing.id);
+      return c.json({ data: { journal: existing, items, verification } });
     }
 
     const resolved = await resolveActiveSemesterAndTemplate(db, student.schoolId);
@@ -235,7 +251,7 @@ journalsRoute.post(
     }
 
     const items = await listJournalItems(db, journal.id);
-    return c.json({ data: { journal, items } }, 201);
+    return c.json({ data: { journal, items, verification: null } }, 201);
   }
 );
 
@@ -277,7 +293,8 @@ journalsRoute.get(
     if (!journal) return c.json(notFoundJournal, 404);
 
     const items = await listJournalItems(db, journal.id);
-    return c.json({ data: { journal, items } });
+    const verification = await findVerification(db, journal.id);
+    return c.json({ data: { journal, items, verification } });
   }
 );
 

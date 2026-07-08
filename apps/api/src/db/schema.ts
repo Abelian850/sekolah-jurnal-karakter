@@ -51,6 +51,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "belum_isi_jurnal",
   "disetujui",
   "ditolak",
+  "revisi",
   "komentar",
 ]);
 
