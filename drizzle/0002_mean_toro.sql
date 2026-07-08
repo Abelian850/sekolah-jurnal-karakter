@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS "students_nisn_idx" ON "students" USING btree ("nisn");

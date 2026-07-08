@@ -2,26 +2,36 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { PERMISSIONS } from "@sjk/shared";
+import { PERMISSIONS, nisnToEmail, NISN_REGEX, hashPassword } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
-import { students, auditLogs } from "../db/schema";
+import { students, users, auditLogs } from "../db/schema";
 import { createUserAccount, deleteUserAccount } from "../services/user-provisioning";
 import type { Env, Variables } from "../index";
 
 export const studentsRoute = new Hono<{ Bindings: Env; Variables: Variables }>();
 
+/**
+ * KONVENSI AKUN SISWA (pasca-Fase 6): admin TIDAK mengisi email/password.
+ * - Username login = NISN (wajib, unik nasional, 5-30 digit).
+ * - Email users dibuat otomatis: nisnToEmail(nisn) -> "<nisn>@siswa.internal".
+ * - Kata sandi awal = NISN (dapat direset ulang via PATCH /:id/reset-password).
+ */
 const studentFields = {
-  email: z.string().email(),
-  password: z.string().min(8),
   nis: z.string().min(1).max(30),
-  nisn: z.string().max(30).optional(),
+  nisn: z.string().regex(NISN_REGEX, "NISN harus berupa 5-30 digit angka"),
   fullName: z.string().min(3).max(255),
   className: z.string().min(2).max(20),
   gradeLevel: z.string().min(2).max(10),
   gender: z.enum(["L", "P"]).optional(),
   birthDate: z.string().date().optional(),
 };
+
+/** Pesan error ramah saat NISN sudah terdaftar (cek dini sebelum insert). */
+async function findStudentByNisn(db: Parameters<typeof createUserAccount>[0], nisn: string) {
+  const [row] = await db.select({ id: students.id }).from(students).where(eq(students.nisn, nisn));
+  return row;
+}
 
 const createStudentSchema = z.object({ schoolId: z.string().uuid(), ...studentFields });
 
@@ -82,9 +92,16 @@ studentsRoute.post(
     const admin = c.get("user");
     const body = c.req.valid("json");
 
+    if (await findStudentByNisn(db, body.nisn)) {
+      return c.json(
+        { error: "conflict", message: `NISN ${body.nisn} sudah terdaftar`, statusCode: 409 },
+        409
+      );
+    }
+
     const user = await createUserAccount(db, {
-      email: body.email,
-      plainPassword: body.password,
+      email: nisnToEmail(body.nisn),
+      plainPassword: body.nisn,
       roleName: "peserta_didik",
     });
 
@@ -147,9 +164,14 @@ studentsRoute.post(
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
+        if (await findStudentByNisn(db, row.nisn)) {
+          results.push({ row: i + 1, success: false, message: `NISN ${row.nisn} sudah terdaftar` });
+          continue;
+        }
+
         const user = await createUserAccount(db, {
-          email: row.email,
-          plainPassword: row.password,
+          email: nisnToEmail(row.nisn),
+          plainPassword: row.nisn,
           roleName: "peserta_didik",
         });
 
@@ -184,5 +206,54 @@ studentsRoute.post(
     }
 
     return c.json({ data: results });
+  }
+);
+
+/**
+ * PATCH /students/:id/reset-password - reset kata sandi siswa kembali ke
+ * NISN-nya. Untuk siswa lama yang dibuat sebelum konvensi login-NISN, atau
+ * siswa yang lupa kata sandi. Hanya Admin (STUDENT_MANAGE).
+ */
+studentsRoute.patch(
+  "/:id/reset-password",
+  authMiddleware,
+  requirePermission(PERMISSIONS.STUDENT_MANAGE),
+  async (c) => {
+    const db = c.get("db");
+    const admin = c.get("user");
+    const id = c.req.param("id");
+
+    const [student] = await db.select().from(students).where(eq(students.id, id));
+    if (!student) {
+      return c.json(
+        { error: "not_found", message: "Peserta didik tidak ditemukan", statusCode: 404 },
+        404
+      );
+    }
+    if (!student.nisn) {
+      return c.json(
+        {
+          error: "bad_request",
+          message:
+            "Siswa ini belum memiliki NISN, jadi kata sandi tidak bisa direset ke NISN. Lengkapi NISN-nya dulu.",
+          statusCode: 400,
+        },
+        400
+      );
+    }
+
+    const passwordHash = await hashPassword(student.nisn);
+    await db.update(users).set({ passwordHash }).where(eq(users.id, student.userId));
+
+    await db.insert(auditLogs).values({
+      userId: admin.sub,
+      action: "reset_password",
+      tableName: "users",
+      recordId: student.userId,
+      newValue: { resetTo: "nisn", studentId: student.id },
+      ipAddress: c.req.header("cf-connecting-ip") ?? null,
+    });
+
+    return c.json({ data: { ok: true } });
   }
 );

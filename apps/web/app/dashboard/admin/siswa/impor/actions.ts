@@ -2,11 +2,13 @@
 
 import { apiFetch } from "@/lib/api-client";
 
+/**
+ * Pasca-Fase 6: kolom email & password DIHAPUS dari impor. Akun siswa
+ * dibuat otomatis oleh API dengan username & kata sandi awal = NISN.
+ */
 export interface StudentImportRow {
-  email: string;
-  password: string;
   nis: string;
-  nisn?: string;
+  nisn: string;
   fullName: string;
   className: string;
   gradeLevel: string;

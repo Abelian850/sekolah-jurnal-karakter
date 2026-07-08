@@ -150,6 +150,10 @@ export const students = pgTable(
   },
   (table) => ({
     nisIdx: uniqueIndex("students_nis_idx").on(table.schoolId, table.nis),
+    // NISN unik nasional - dipakai sebagai username login siswa
+    // (pasca-Fase 6). Unique index Postgres mengizinkan banyak NULL,
+    // jadi data siswa lama tanpa NISN tidak melanggar constraint.
+    nisnIdx: uniqueIndex("students_nisn_idx").on(table.nisn),
     classIdx: index("students_class_idx").on(table.className),
   })
 );

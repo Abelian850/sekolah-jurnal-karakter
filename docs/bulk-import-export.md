@@ -45,12 +45,19 @@ EXPORT:
 - ⚠️ Validasi format Excel (nama kolom, tipe data) terjadi di browser sebelum data terkirim — pesan error jika format salah harus jelas (lihat `parseError` di komponen).
 - ⚠️ Baris diproses satu per satu di backend (bukan satu transaksi besar), karena keterbatasan transaksi interaktif Neon HTTP driver (lihat `apps/api/src/services/user-provisioning.ts`). Jika 500 dari 500 baris gagal karena satu kesalahan sistemik (mis. DATABASE_URL salah), semuanya akan gagal satu per satu — bukan cepat gagal di baris pertama. Untuk Fase 4 ini dianggap dapat diterima karena skala data (~100-1000 baris) tetap wajar diproses dalam beberapa detik.
 
-## Format kolom yang didukung saat ini (Fase 4)
+## Format kolom yang didukung saat ini
 
 **Import Peserta Didik** (`/dashboard/admin/siswa/impor`):
 ```
-email | password | nis | nisn | fullName | className | gradeLevel | gender | birthDate
+nis | nisn | fullName | className | gradeLevel | gender | birthDate
 ```
+
+> **Pembaruan pasca-Fase 6:** kolom `email` dan `password` DIHAPUS. Akun
+> login siswa dibuat otomatis oleh backend: username = **NISN**, kata sandi
+> awal = **NISN**, email internal = `<nisn>@siswa.internal` (lihat
+> `packages/shared/src/students.ts`). `nisn` kini **wajib & unik** (5-30
+> digit angka). NIS/NISN yang terbaca Excel sebagai angka dinormalisasi ke
+> string di browser sebelum dikirim.
 
 **Import Guru**: mengikuti pola yang sama (`POST /teachers/bulk` di backend sudah tersedia),
 komponen UI-nya dapat ditambahkan mengikuti pola `bulk-import-students.tsx` bila dibutuhkan.

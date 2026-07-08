@@ -112,14 +112,17 @@ Studio.
    — sudah berisi header kolom yang benar + 2 baris contoh.
 2. Isi/ganti baris-baris di template sesuai data siswa sekolah Anda. Jangan
    mengubah nama kolom di baris pertama.
-   - Kolom wajib: `email, password, nis, fullName, className, gradeLevel`
-   - Kolom opsional (boleh dikosongkan): `nisn, gender (isi L/P), birthDate (format YYYY-MM-DD)`
+   - Kolom wajib: `nis, nisn, fullName, className, gradeLevel`
+   - Kolom opsional (boleh dikosongkan): `gender (isi L/P), birthDate (format YYYY-MM-DD)`
+   - *(Pembaruan pasca-Fase 6: kolom `email` & `password` dihapus - akun
+     dibuat otomatis, siswa login dengan NISN. Lihat bagian paling bawah
+     dokumen ini.)*
 3. Sidebar → **Peserta Didik** → **Impor Excel**.
 4. Pilih Sekolah tujuan di dropdown atas.
 5. Klik **File Excel (.xlsx)**, pilih file yang sudah diisi.
 6. Preview 20 baris pertama akan muncul untuk Anda cek sekilas.
 7. Klik **Impor N Peserta Didik**. Tunggu sampai muncul ringkasan
-   "X berhasil, Y gagal". Jika ada yang gagal (mis. email sudah dipakai),
+   "X berhasil, Y gagal". Jika ada yang gagal (mis. NISN sudah terdaftar),
    pesan errornya ditampilkan per baris — perbaiki lalu impor ulang khusus
    baris yang gagal saja (baris yang sudah berhasil tidak akan terduplikasi
    selama email/NIS-nya tidak diulang).
@@ -244,3 +247,28 @@ dashboard mereka pada Fase 7).
 
 - Siswa: menu **Notifikasi** (ada badge merah jumlah belum dibaca di menu).
 - Klik **Tandai semua terbaca** untuk membersihkan badge.
+
+---
+
+## Pembaruan pasca-Fase 6 — Login Peserta Didik dengan NISN
+
+Cara login siswa berubah (menggantikan email):
+
+- **Username = NISN**, **kata sandi awal = NISN**. Di halaman login, siswa
+  cukup memasukkan NISN di kedua kolom. Role lain (Admin/Guru/dst) tetap
+  login dengan email seperti biasa - satu halaman login yang sama.
+- Saat menambah siswa (satuan maupun impor Excel), Admin **tidak lagi
+  mengisi email & kata sandi** - akun dibuat otomatis. **NISN kini wajib
+  diisi dan harus unik** (5-30 digit angka).
+- Template impor Excel berubah: kolom `email` dan `password` dihapus.
+  Unduh ulang [`docs/templates/template-import-siswa.xlsx`](./templates/template-import-siswa.xlsx).
+- Untuk **siswa lama** (dibuat dengan email+kata sandi sebelum pembaruan
+  ini): di halaman **Peserta Didik**, klik **Reset sandi ke NISN** pada
+  baris siswa tersebut. Setelah direset, siswa login dengan NISN. Siswa
+  lama tanpa NISN harus dilengkapi NISN-nya dulu oleh Admin.
+- Jalankan `npm run db:migrate` (migrasi `0002` menambah unique index NISN).
+
+> ⚠️ Catatan keamanan: NISN mudah diketahui orang lain (tercetak di kartu
+> pelajar/rapor). Kata sandi = NISN sebaiknya diperlakukan sebagai kata
+> sandi awal saja; fitur ganti kata sandi mandiri direncanakan pada fase
+> hardening keamanan (Fase 9).

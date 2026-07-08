@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { apiFetch } from "@/lib/api-client";
 import { ExportStudentsButton } from "@/components/export-students-button";
+import { ResetStudentPasswordButton } from "@/components/reset-student-password-button";
 
 interface Student {
   id: string;
@@ -44,18 +45,28 @@ export default async function SiswaListPage() {
           <thead>
             <tr className="border-b border-slate-200 text-slate-500 dark:border-slate-700">
               <th className="py-2">NIS</th>
+              <th className="py-2">NISN</th>
               <th className="py-2">Nama</th>
               <th className="py-2">Kelas</th>
               <th className="py-2">Angkatan</th>
+              <th className="py-2">Aksi</th>
             </tr>
           </thead>
           <tbody>
             {students.map((s) => (
               <tr key={s.id} className="border-b border-slate-100 dark:border-slate-800">
                 <td className="py-2">{s.nis}</td>
+                <td className="py-2">{s.nisn ?? "-"}</td>
                 <td className="py-2 font-medium">{s.fullName}</td>
                 <td className="py-2">{s.className}</td>
                 <td className="py-2">{s.gradeLevel}</td>
+                <td className="py-2">
+                  <ResetStudentPasswordButton
+                    studentId={s.id}
+                    studentName={s.fullName}
+                    nisn={s.nisn}
+                  />
+                </td>
               </tr>
             ))}
           </tbody>

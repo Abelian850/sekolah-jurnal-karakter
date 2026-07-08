@@ -13,10 +13,8 @@ async function createStudent(formData: FormData) {
     method: "POST",
     body: JSON.stringify({
       schoolId: formData.get("schoolId"),
-      email: formData.get("email"),
-      password: formData.get("password"),
       nis: formData.get("nis"),
-      nisn: formData.get("nisn") || undefined,
+      nisn: formData.get("nisn"),
       fullName: formData.get("fullName"),
       className: formData.get("className"),
       gradeLevel: formData.get("gradeLevel"),
@@ -71,9 +69,12 @@ export default async function SiswaBaruPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">NISN (opsional)</label>
+            <label className="mb-1 block text-sm font-medium">NISN</label>
             <input
               name="nisn"
+              required
+              pattern="\d{5,30}"
+              title="NISN berupa 5-30 digit angka"
               className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80"
             />
           </div>
@@ -122,26 +123,10 @@ export default async function SiswaBaruPage() {
           </div>
         </div>
 
-        <div>
-          <label className="mb-1 block text-sm font-medium">Email (untuk login)</label>
-          <input
-            type="email"
-            name="email"
-            required
-            className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">Kata Sandi Awal</label>
-          <input
-            type="password"
-            name="password"
-            required
-            minLength={8}
-            className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80"
-          />
-        </div>
+        <p className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800/50 dark:text-slate-400">
+          Akun login dibuat otomatis: siswa masuk dengan <strong>NISN</strong> sebagai
+          username sekaligus kata sandi awal. Tidak perlu mengisi email.
+        </p>
 
         <button
           type="submit"

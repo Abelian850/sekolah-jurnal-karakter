@@ -60,17 +60,36 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
+        email: { label: "Email atau NISN", type: "text" },
         password: { label: "Kata Sandi", type: "password" },
       },
       authorize: async (credentials) => {
-        const email = credentials?.email as string | undefined;
+        const identifier = credentials?.email as string | undefined;
         const password = credentials?.password as string | undefined;
 
-        if (!email || !password) return null;
+        if (!identifier || !password) return null;
 
         const sql = neon(process.env.DATABASE_URL as string);
         const db = drizzle(sql);
+
+        // Identifier tanpa "@" diperlakukan sebagai NISN siswa (pasca-Fase 6:
+        // username login siswa = NISN). Resolusi tetap lewat tabel students
+        // (sumber kebenaran), BUKAN dengan menebak email "<nisn>@siswa.internal",
+        // agar siswa lama yang emailnya bukan format internal tetap bisa login
+        // dengan NISN mereka.
+        const email = identifier.includes("@") ? identifier.toLowerCase() : null;
+        const trimmed = identifier.trim();
+
+        let userId: string | null = null;
+        if (!email) {
+          const [studentRow] = await db
+            .select({ userId: students.userId })
+            .from(students)
+            .where(eq(students.nisn, trimmed))
+            .limit(1);
+          if (!studentRow) return null;
+          userId = studentRow.userId;
+        }
 
         const [row] = await db
           .select({
@@ -82,7 +101,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           })
           .from(users)
           .innerJoin(roles, eq(users.roleId, roles.id))
-          .where(eq(users.email, email.toLowerCase()))
+          .where(email ? eq(users.email, email) : eq(users.id, userId as string))
           .limit(1);
 
         if (!row || !row.isActive) return null;

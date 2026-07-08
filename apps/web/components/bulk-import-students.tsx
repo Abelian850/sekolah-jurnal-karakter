@@ -17,7 +17,8 @@ import {
  * berupa array JSON biasa yang dikirim ke Server Action `bulkImportStudents`.
  *
  * Format kolom Excel yang diharapkan (baris pertama = header):
- * email | password | nis | nisn | fullName | className | gradeLevel | gender | birthDate
+ * nis | nisn | fullName | className | gradeLevel | gender | birthDate
+ * (email & password tidak ada lagi - akun dibuat otomatis, login = NISN)
  */
 export function BulkImportStudents({ schools }: { schools: { id: string; name: string }[] }) {
   const [schoolId, setSchoolId] = useState(schools[0]?.id ?? "");
@@ -41,7 +42,20 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
         const data = new Uint8Array(event.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const parsed = XLSX.utils.sheet_to_json<StudentImportRow>(firstSheet, { defval: "" });
+        const raw = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, {
+          defval: "",
+        });
+        // Excel sering membaca NIS/NISN sebagai angka - normalisasi ke string
+        // agar tidak ditolak validasi backend.
+        const parsed: StudentImportRow[] = raw.map((r) => ({
+          nis: String(r.nis ?? "").trim(),
+          nisn: String(r.nisn ?? "").trim(),
+          fullName: String(r.fullName ?? "").trim(),
+          className: String(r.className ?? "").trim(),
+          gradeLevel: String(r.gradeLevel ?? "").trim(),
+          gender: r.gender ? (String(r.gender).trim() as "L" | "P") : undefined,
+          birthDate: r.birthDate ? String(r.birthDate).trim() : undefined,
+        }));
 
         if (parsed.length === 0) {
           setParseError("File tidak berisi data. Pastikan baris pertama adalah header kolom.");
@@ -106,8 +120,8 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
                 <tr>
                   <th className="px-2 py-1.5">Nama</th>
                   <th className="px-2 py-1.5">NIS</th>
+                  <th className="px-2 py-1.5">NISN</th>
                   <th className="px-2 py-1.5">Kelas</th>
-                  <th className="px-2 py-1.5">Email</th>
                 </tr>
               </thead>
               <tbody>
@@ -115,8 +129,8 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
                   <tr key={i} className="border-t border-slate-100 dark:border-slate-800">
                     <td className="px-2 py-1.5">{r.fullName}</td>
                     <td className="px-2 py-1.5">{r.nis}</td>
+                    <td className="px-2 py-1.5">{r.nisn}</td>
                     <td className="px-2 py-1.5">{r.className}</td>
-                    <td className="px-2 py-1.5">{r.email}</td>
                   </tr>
                 ))}
               </tbody>
