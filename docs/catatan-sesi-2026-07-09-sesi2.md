@@ -51,8 +51,14 @@ Typecheck API & web lolos (`tsconfig.sandbox.json`).
 
 ## Rencana berikutnya
 
-1. User: `npm run db:migrate` (migrasi 0004), lalu uji manual:
-   buat akun KS (admin) → login KS → dashboard; login orang tua →
-   lihat jurnal anak → kirim komentar → cek notifikasi siswa/guru wali.
-2. Push ke GitHub (kini 7 commit lokal tertunda).
-3. Lanjut **Fase 8 — Landing Page & polish UI/UX** (lihat README).
+1. ~~Migrasi~~ SUDAH: 0003 & 0004 terverifikasi terpasang di Neon
+   (5 migrasi tercatat; ternyata 0003 kemarin memang belum dijalankan).
+2. **Uji manual lokal** (belum dilakukan), urutan:
+   (a) Guru Wali tab Bukti Harian — fitur 0003 yang belum pernah teruji;
+   (b) siswa submit jurnal, uji validasi foto wajib;
+   (c) guru wali verifikasi + nilai;
+   (d) admin buat akun KS → login KS → dashboard analitik;
+   (e) orang tua → detail jurnal anak → komentar → cek notifikasi
+   siswa & guru wali.
+3. Push ke GitHub (kini 8 commit lokal tertunda).
+4. Lanjut **Fase 8 — Landing Page & polish UI/UX** (lihat README).
