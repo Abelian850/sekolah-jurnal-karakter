@@ -1,6 +1,9 @@
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { formatDateID, getTodayDateWIB } from "@/lib/date";
-import { JournalItemsForm } from "@/components/journal-items-form";
+import {
+  JournalItemsForm,
+  type EvidenceRequirementInfo,
+} from "@/components/journal-items-form";
 import { JournalItemsView, type JournalItemData } from "@/components/journal-items-view";
 import { createTodayJournal } from "./actions";
 
@@ -31,6 +34,7 @@ export default async function JurnalHariIniPage() {
     journal: Journal;
     items: JournalItemData[];
     verification: Verification | null;
+    evidenceRequirement: EvidenceRequirementInfo | null;
   } | null = null;
   let profileMissing = false;
   try {
@@ -38,6 +42,7 @@ export default async function JurnalHariIniPage() {
       journal: Journal;
       items: JournalItemData[];
       verification: Verification | null;
+      evidenceRequirement: EvidenceRequirementInfo | null;
     } | null>(`/journals/today?date=${today}`);
   } catch (err) {
     if (err instanceof ApiRequestError && err.statusCode === 404) {
@@ -80,7 +85,11 @@ export default async function JurnalHariIniPage() {
               <p className="mt-1 text-xs">Perbaiki isianmu di bawah, lalu kirim ulang.</p>
             </div>
           )}
-          <JournalItemsForm journalId={data.journal.id} items={data.items} />
+          <JournalItemsForm
+            journalId={data.journal.id}
+            items={data.items}
+            evidenceRequirement={data.evidenceRequirement}
+          />
         </div>
       ) : (
         <div>

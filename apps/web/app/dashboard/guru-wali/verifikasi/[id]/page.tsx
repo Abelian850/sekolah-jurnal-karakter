@@ -45,6 +45,7 @@ export default async function VerifikasiJurnalPage({
     student: StudentInfo;
     items: JournalItemData[];
     verification: Verification | null;
+    evidenceRequirement: { templateItemId: string; itemName: string } | null;
   };
   try {
     data = await apiFetch(`/verifications/journals/${id}`);
@@ -53,7 +54,7 @@ export default async function VerifikasiJurnalPage({
     throw err;
   }
 
-  const { journal, student, items, verification } = data;
+  const { journal, student, items, verification, evidenceRequirement } = data;
 
   return (
     <div className="glass-panel rounded-2xl p-6">
@@ -78,6 +79,12 @@ export default async function VerifikasiJurnalPage({
             </p>
           )}
         </div>
+      )}
+
+      {evidenceRequirement && (
+        <p className="mb-2 inline-block rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-600 dark:bg-brand-900/40 dark:text-brand-500">
+          Kebiasaan wajib berbukti tanggal ini: {evidenceRequirement.itemName}
+        </p>
       )}
 
       <JournalItemsView items={items} />

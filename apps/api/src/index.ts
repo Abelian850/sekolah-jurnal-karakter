@@ -16,6 +16,7 @@ import { journalTemplatesRoute } from "./routes/journal-templates";
 import { journalsRoute } from "./routes/journals";
 import { verificationsRoute } from "./routes/verifications";
 import { notificationsRoute } from "./routes/notifications";
+import { evidenceRequirementsRoute } from "./routes/evidence-requirements";
 import type { AppJwtPayload } from "@sjk/shared";
 
 /**
@@ -75,6 +76,7 @@ app.route("/journal-templates", journalTemplatesRoute);
 app.route("/journals", journalsRoute);
 app.route("/verifications", verificationsRoute);
 app.route("/notifications", notificationsRoute);
+app.route("/evidence-requirements", evidenceRequirementsRoute);
 
 // ---------- Error handler global ----------
 app.onError((err, c) => {

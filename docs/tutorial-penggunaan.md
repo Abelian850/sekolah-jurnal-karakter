@@ -272,3 +272,42 @@ Cara login siswa berubah (menggantikan email):
 > pelajar/rapor). Kata sandi = NISN sebaiknya diperlakukan sebagai kata
 > sandi awal saja; fitur ganti kata sandi mandiri direncanakan pada fase
 > hardening keamanan (Fase 9).
+
+---
+
+## Pembaruan pasca-Fase 6 — Aturan 7 Kebiasaan Anak Indonesia Hebat
+
+Aplikasi ini mendukung program **7 Kebiasaan Anak Indonesia Hebat** (bangun
+pagi, beribadah, berolahraga, makan sehat & bergizi, gemar belajar,
+bermasyarakat, tidur cepat). Dua aturan baru berlaku saat siswa menekan
+**Kirim Jurnal** (dicek di browser DAN di server):
+
+> Prasyarat: jalankan `npm run db:migrate` (migrasi `0003` menambah tabel
+> `evidence_requirements`).
+
+### Aturan 1 — Semua kebiasaan wajib diisi
+
+Jurnal tidak bisa dikirim jika masih ada item berstatus **Belum** tanpa
+keterangan. Siswa yang tidak melakukan sebuah kebiasaan tetap boleh
+mengirim jurnal, tapi **wajib menuliskan keterangan** pada item tersebut
+(kolom keterangan kini tersedia di semua tipe item).
+
+### Aturan 2 — Wajib satu foto bukti; kebiasaannya dipilih Guru Wali
+
+- Setiap item kini punya kolom **foto bukti (URL)** — bukti cukup **satu
+  foto** dari salah satu kebiasaan, bukan semua.
+- **Guru Wali memilih kebiasaan mana yang wajib berbukti, per hari**, dari
+  tab baru **Bukti Harian** di dashboard Guru Wali: pilih tanggal (default
+  hari ini), pilih satu kebiasaan, klik **Simpan Pilihan**. Pilihan berlaku
+  untuk **semua siswa binaan** guru tersebut pada tanggal itu dan bisa
+  diganti/dihapus kapan saja.
+- Di form siswa, kebiasaan terpilih diberi badge **"Wajib foto hari ini"**.
+- **Fallback**: jika Guru Wali belum/lupa menetapkan untuk tanggal itu
+  (atau pilihan dihapus), siswa tetap wajib melampirkan minimal satu foto,
+  pada kebiasaan **mana pun** — jurnal tidak pernah terblokir karena guru
+  lupa mengatur.
+- Kasus khusus: jika kebiasaan yang diwajibkan justru **tidak dilakukan**
+  siswa (status Belum + keterangan), foto pada kebiasaan itu mustahil ada;
+  sistem otomatis kembali ke aturan fallback (satu foto bebas).
+- Saat memeriksa jurnal, Guru Wali melihat badge kebiasaan yang ia wajibkan
+  pada tanggal jurnal tersebut di halaman periksa.

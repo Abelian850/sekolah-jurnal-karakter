@@ -13,6 +13,7 @@ import {
   journalItems,
   journalTemplateItems,
   verifications,
+  evidenceRequirements,
   notifications,
   studentParent,
   parents,
@@ -207,12 +208,38 @@ verificationsRoute.get(
       .from(verifications)
       .where(eq(verifications.journalId, row.journal.id));
 
+    // Kebiasaan wajib berbukti yang guru INI tetapkan untuk tanggal jurnal
+    // tsb (bisa null) - ditampilkan di halaman periksa agar guru ingat apa
+    // yang ia wajibkan hari itu.
+    const teacher = await findOwnTeacher(db, user.sub);
+    let evidenceRequirement: { templateItemId: string; itemName: string } | null = null;
+    if (teacher) {
+      const [req] = await db
+        .select({
+          templateItemId: evidenceRequirements.templateItemId,
+          itemName: journalTemplateItems.itemName,
+        })
+        .from(evidenceRequirements)
+        .innerJoin(
+          journalTemplateItems,
+          eq(evidenceRequirements.templateItemId, journalTemplateItems.id)
+        )
+        .where(
+          and(
+            eq(evidenceRequirements.teacherId, teacher.id),
+            eq(evidenceRequirements.requirementDate, row.journal.journalDate)
+          )
+        );
+      evidenceRequirement = req ?? null;
+    }
+
     return c.json({
       data: {
         journal: row.journal,
         student: row.student,
         items,
         verification: verification ?? null,
+        evidenceRequirement,
       },
     });
   }

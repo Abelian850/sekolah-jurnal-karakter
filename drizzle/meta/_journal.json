@@ -22,6 +22,13 @@
       "when": 1783518265208,
       "tag": "0002_mean_toro",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1783557742341,
+      "tag": "0003_misty_george_stacy",
+      "breakpoints": true
     }
   ]
 }

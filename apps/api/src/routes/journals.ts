@@ -14,6 +14,8 @@ import {
   academicYears,
   semesters,
   verifications,
+  teacherStudent,
+  evidenceRequirements,
 } from "../db/schema";
 import type { Database } from "../db/client";
 import type { Env, Variables } from "../index";
@@ -126,6 +128,35 @@ async function findVerification(db: Database, journalId: string) {
   return verification ?? null;
 }
 
+/**
+ * Kebiasaan wajib berbukti foto yang ditetapkan Guru Wali AKTIF siswa untuk
+ * satu tanggal (requirement 7 Kebiasaan Anak Indonesia Hebat), atau null
+ * jika guru belum menetapkan / siswa belum punya Guru Wali aktif.
+ * Diturunkan dari teacher_student (isActive) - bukan dari klien.
+ */
+async function findEvidenceRequirement(db: Database, studentId: string, journalDate: string) {
+  const [row] = await db
+    .select({
+      templateItemId: evidenceRequirements.templateItemId,
+      itemName: journalTemplateItems.itemName,
+    })
+    .from(evidenceRequirements)
+    .innerJoin(
+      teacherStudent,
+      and(
+        eq(teacherStudent.teacherId, evidenceRequirements.teacherId),
+        eq(teacherStudent.studentId, studentId),
+        eq(teacherStudent.isActive, true)
+      )
+    )
+    .innerJoin(
+      journalTemplateItems,
+      eq(evidenceRequirements.templateItemId, journalTemplateItems.id)
+    )
+    .where(eq(evidenceRequirements.requirementDate, journalDate));
+  return row ?? null;
+}
+
 const notFoundStudent = {
   error: "not_found",
   message: "Profil peserta didik untuk akun ini tidak ditemukan. Hubungi Admin sekolah.",
@@ -168,7 +199,8 @@ journalsRoute.get(
 
     const items = await listJournalItems(db, journal.id);
     const verification = await findVerification(db, journal.id);
-    return c.json({ data: { journal, items, verification } });
+    const evidenceRequirement = await findEvidenceRequirement(db, student.id, journal.journalDate);
+    return c.json({ data: { journal, items, verification, evidenceRequirement } });
   }
 );
 
@@ -199,7 +231,8 @@ journalsRoute.post(
     if (existing) {
       const items = await listJournalItems(db, existing.id);
       const verification = await findVerification(db, existing.id);
-      return c.json({ data: { journal: existing, items, verification } });
+      const evidenceRequirement = await findEvidenceRequirement(db, student.id, journalDate);
+      return c.json({ data: { journal: existing, items, verification, evidenceRequirement } });
     }
 
     const resolved = await resolveActiveSemesterAndTemplate(db, student.schoolId);
@@ -251,7 +284,8 @@ journalsRoute.post(
     }
 
     const items = await listJournalItems(db, journal.id);
-    return c.json({ data: { journal, items, verification: null } }, 201);
+    const evidenceRequirement = await findEvidenceRequirement(db, student.id, journalDate);
+    return c.json({ data: { journal, items, verification: null, evidenceRequirement } }, 201);
   }
 );
 
@@ -294,7 +328,12 @@ journalsRoute.get(
 
     const items = await listJournalItems(db, journal.id);
     const verification = await findVerification(db, journal.id);
-    return c.json({ data: { journal, items, verification } });
+    const evidenceRequirement = await findEvidenceRequirement(
+      db,
+      journal.studentId,
+      journal.journalDate
+    );
+    return c.json({ data: { journal, items, verification, evidenceRequirement } });
   }
 );
 
@@ -385,6 +424,63 @@ journalsRoute.patch(
           statusCode: 409,
         },
         409
+      );
+    }
+
+    // ---------- Validasi 7 Kebiasaan Anak Indonesia Hebat ----------
+    // Aturan 1: SEMUA item wajib terisi. Item dianggap terisi jika
+    // statusnya selesai/sebagian, ATAU berstatus "belum" DENGAN keterangan
+    // (siswa boleh tidak melakukan kebiasaan, tapi wajib menjelaskan).
+    const items = await listJournalItems(db, journal.id);
+
+    const incomplete = items.filter(
+      (i) => i.status === "belum" && (i.note ?? "").trim() === ""
+    );
+    if (incomplete.length > 0) {
+      return c.json(
+        {
+          error: "incomplete_items",
+          message:
+            "Semua kebiasaan wajib diisi. Lengkapi (atau beri keterangan jika belum dilakukan): " +
+            incomplete.map((i) => i.itemName).join(", "),
+          statusCode: 422,
+        },
+        422
+      );
+    }
+
+    // Aturan 2: WAJIB ada minimal SATU foto bukti.
+    // - Jika Guru Wali menetapkan kebiasaan wajib berbukti untuk tanggal ini,
+    //   foto harus dilampirkan pada kebiasaan TERSEBUT - kecuali item itu
+    //   berstatus "belum" (tidak dilakukan, sudah berketerangan), karena
+    //   memotret kebiasaan yang tidak dilakukan mustahil; saat itu berlaku
+    //   fallback foto pada kebiasaan mana pun.
+    // - Jika guru belum menetapkan: foto boleh pada kebiasaan mana pun.
+    const requirement = await findEvidenceRequirement(db, journal.studentId, journal.journalDate);
+    const requiredItem = requirement
+      ? items.find((i) => i.templateItemId === requirement.templateItemId)
+      : undefined;
+
+    if (requiredItem && requiredItem.status !== "belum") {
+      if ((requiredItem.photoUrl ?? "").trim() === "") {
+        return c.json(
+          {
+            error: "missing_required_photo",
+            message: `Guru Wali mewajibkan foto bukti pada kebiasaan "${requiredItem.itemName}" hari ini. Lampirkan fotonya sebelum mengirim.`,
+            statusCode: 422,
+          },
+          422
+        );
+      }
+    } else if (!items.some((i) => (i.photoUrl ?? "").trim() !== "")) {
+      return c.json(
+        {
+          error: "missing_photo",
+          message:
+            "Lampirkan minimal satu foto bukti pada salah satu kebiasaan sebelum mengirim jurnal.",
+          statusCode: 422,
+        },
+        422
       );
     }
 

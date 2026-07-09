@@ -16,6 +16,13 @@ Aplikasi jurnal karakter dan monitoring peserta didik berbasis relasi **Guru Wal
 > `docs/deployment.md`.
 - [x] **Fase 5** — Modul Jurnal Harian (template jurnal oleh Admin, pengisian & kirim jurnal oleh Peserta Didik, riwayat)
 - [x] **Fase 6** — Validasi & Penilaian Karakter oleh Guru Wali (setujui/revisi/tolak + nilai 1-100) + Notifikasi in-app
+
+> ℹ️ **Pembaruan pasca-Fase 6:** (1) Login Peserta Didik dengan **NISN**
+> (username & kata sandi awal). (2) Aturan **7 Kebiasaan Anak Indonesia
+> Hebat**: semua item jurnal wajib diisi (status "Belum" harus
+> berketerangan) + wajib **satu foto bukti** pada kebiasaan yang dipilih
+> **Guru Wali per hari** (tab "Bukti Harian"; fallback foto bebas jika
+> belum ditetapkan). Detail di `docs/tutorial-penggunaan.md`.
 - [ ] Fase 7 — Dashboard Kepala Sekolah & Orang Tua
 - [ ] Fase 8 — Landing Page & polish UI/UX
 - [ ] Fase 9 — Audit log, backup/restore, hardening keamanan
@@ -66,4 +73,4 @@ npm run dev:web   # terminal 2
 - [Bulk Import & Export Excel](./docs/bulk-import-export.md)
 - [Setup Lokal](./docs/setup-lokal.md)
 - [Environment Variables](./docs/environment-variables.md)
-- [Deployment & CI
+- [Deployment & CI/CD](./docs/deployment.md)

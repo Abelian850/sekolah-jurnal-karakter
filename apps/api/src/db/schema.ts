@@ -271,6 +271,37 @@ export const journalItems = pgTable("journal_items", {
   photoUrl: text("photo_url"), // URL objek di Cloudflare R2
 });
 
+/**
+ * Kebiasaan wajib berbukti foto per HARI, ditetapkan oleh Guru Wali untuk
+ * seluruh siswa binaannya (requirement 7 Kebiasaan Anak Indonesia Hebat).
+ * - Satu baris per (guru, tanggal); ganti pilihan = UPSERT baris yang sama.
+ * - Menunjuk journal_template_items (bukan journal_items) supaya berlaku
+ *   untuk semua jurnal siswa binaan pada tanggal itu.
+ * - Jika tidak ada baris untuk tanggal tsb (guru belum/lupa menetapkan),
+ *   fallback: siswa tetap wajib melampirkan minimal SATU foto pada
+ *   kebiasaan mana pun (lihat validasi submit di routes/journals.ts).
+ */
+export const evidenceRequirements = pgTable(
+  "evidence_requirements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    teacherId: uuid("teacher_id")
+      .notNull()
+      .references(() => teachers.id, { onDelete: "cascade" }),
+    requirementDate: date("requirement_date").notNull(),
+    templateItemId: uuid("template_item_id")
+      .notNull()
+      .references(() => journalTemplateItems.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    uniqueDaily: uniqueIndex("evidence_requirements_teacher_date_idx").on(
+      table.teacherId,
+      table.requirementDate
+    ),
+  })
+);
+
 export const verifications = pgTable("verifications", {
   id: uuid("id").primaryKey().defaultRandom(),
   journalId: uuid("journal_id")

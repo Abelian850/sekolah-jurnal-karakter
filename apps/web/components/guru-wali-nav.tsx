@@ -16,6 +16,11 @@ const NAV_ITEMS = [
     label: "Riwayat Verifikasi",
     match: (p: string) => p.startsWith("/dashboard/guru-wali/riwayat"),
   },
+  {
+    href: "/dashboard/guru-wali/bukti-harian",
+    label: "Bukti Harian",
+    match: (p: string) => p.startsWith("/dashboard/guru-wali/bukti-harian"),
+  },
 ];
 
 export function GuruWaliNav() {
