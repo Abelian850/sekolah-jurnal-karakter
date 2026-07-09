@@ -4,6 +4,7 @@ import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { formatDateID } from "@/lib/date";
 import { JournalItemsView, type JournalItemData } from "@/components/journal-items-view";
 import { VerificationForm } from "@/components/verification-form";
+import { CommentsList, type CommentData } from "@/components/comments-list";
 
 interface Journal {
   id: string;
@@ -46,6 +47,7 @@ export default async function VerifikasiJurnalPage({
     items: JournalItemData[];
     verification: Verification | null;
     evidenceRequirement: { templateItemId: string; itemName: string } | null;
+    comments: CommentData[];
   };
   try {
     data = await apiFetch(`/verifications/journals/${id}`);
@@ -54,7 +56,7 @@ export default async function VerifikasiJurnalPage({
     throw err;
   }
 
-  const { journal, student, items, verification, evidenceRequirement } = data;
+  const { journal, student, items, verification, evidenceRequirement, comments } = data;
 
   return (
     <div className="glass-panel rounded-2xl p-6">
@@ -88,6 +90,8 @@ export default async function VerifikasiJurnalPage({
       )}
 
       <JournalItemsView items={items} />
+
+      <CommentsList comments={comments} />
 
       {journal.status === "submitted" ? (
         <VerificationForm journalId={journal.id} />

@@ -23,7 +23,13 @@ Aplikasi jurnal karakter dan monitoring peserta didik berbasis relasi **Guru Wal
 > berketerangan) + wajib **satu foto bukti** pada kebiasaan yang dipilih
 > **Guru Wali per hari** (tab "Bukti Harian"; fallback foto bebas jika
 > belum ditetapkan). Detail di `docs/tutorial-penggunaan.md`.
-- [ ] Fase 7 — Dashboard Kepala Sekolah & Orang Tua
+- [x] **Fase 7** — Dashboard Kepala Sekolah & Orang Tua (analitik sekolah untuk KS, jurnal anak + komentar untuk orang tua)
+
+> ℹ️ **Catatan Fase 7:** Kepala sekolah kini punya profil `principals`
+> (ditautkan ke sekolah oleh Admin lewat sidebar **Kepala Sekolah**), dan
+> orang tua dapat berkomentar pada jurnal anak (tabel `comments`, notifikasi
+> otomatis ke siswa & guru wali). Jalankan `npm run db:migrate`
+> (migrasi `0004`). Detail di `docs/tutorial-penggunaan.md`.
 - [ ] Fase 8 — Landing Page & polish UI/UX
 - [ ] Fase 9 — Audit log, backup/restore, hardening keamanan
 - [ ] Fase 10 — Dokumentasi & tutorial lengkap

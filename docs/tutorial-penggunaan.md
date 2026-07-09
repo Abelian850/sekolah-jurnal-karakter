@@ -311,3 +311,63 @@ mengirim jurnal, tapi **wajib menuliskan keterangan** pada item tersebut
   sistem otomatis kembali ke aturan fallback (satu foto bebas).
 - Saat memeriksa jurnal, Guru Wali melihat badge kebiasaan yang ia wajibkan
   pada tanggal jurnal tersebut di halaman periksa.
+
+## Fase 7 — Dashboard Kepala Sekolah & Orang Tua
+
+> Prasyarat: jalankan `npm run db:migrate` (migrasi `0004` menambah tabel
+> `principals` dan `comments`).
+
+### Membuat akun Kepala Sekolah (oleh Admin)
+
+1. Login sebagai Admin → sidebar → **Kepala Sekolah** → **+ Tambah Kepala
+   Sekolah**.
+2. Pilih **sekolah** yang dipimpin, isi nama, email login, kata sandi awal,
+   dan telepon (opsional), lalu **Simpan**.
+3. Akun langsung bisa dipakai login. Tautan ke sekolah inilah yang membuat
+   dashboard analitik menampilkan data sekolah yang benar — akun kepala
+   sekolah **tanpa** tautan sekolah akan melihat pesan galat yang meminta
+   menghubungi Admin.
+4. **Hapus akun** di halaman yang sama menghapus profil sekaligus akun
+   login-nya.
+
+### Dashboard Kepala Sekolah
+
+Login sebagai kepala sekolah → dashboard menampilkan (semuanya terbatas
+pada sekolah yang dipimpin, dihitung per hari ini WIB):
+
+- **Kartu ringkasan** — jumlah peserta didik aktif, guru, guru wali, dan
+  rata-rata nilai karakter 30 hari terakhir.
+- **Jurnal Hari Ini** — berapa siswa yang jurnalnya disetujui, terkirim,
+  masih draf, ditolak, atau **belum membuat jurnal sama sekali**.
+- **Verifikasi 30 Hari Terakhir** — distribusi hasil pemeriksaan Guru Wali
+  (disetujui/revisi/ditolak/menunggu diperiksa).
+- **Jurnal Terkirim 7 Hari Terakhir** — grafik batang per hari.
+- **Rata-rata Nilai Karakter per Kelas** — dari jurnal yang dinilai dalam
+  30 hari terakhir.
+
+Dashboard ini **hanya membaca** — kepala sekolah tidak mengubah data apa pun.
+
+### Dashboard Orang Tua
+
+Login sebagai orang tua (akun dibuat Admin di Fase 4):
+
+1. Tab **Anak Saya** menampilkan semua anak yang tertaut ke akun (satu akun
+   bisa tertaut ke lebih dari satu anak). Klik anak → riwayat jurnalnya.
+2. Klik **Lihat detail** pada satu jurnal → tampilan **read-only** item
+   jurnal (status, keterangan, foto bukti) + **hasil penilaian Guru Wali**
+   (status verifikasi, nilai karakter, catatan).
+3. Tab **Notifikasi** menampilkan notifikasi yang sejak Fase 6 sudah
+   dikirim backend ke orang tua (jurnal anak disetujui/ditolak/revisi),
+   kini akhirnya punya UI.
+
+### Komentar Orang Tua pada Jurnal Anak
+
+- Di halaman detail jurnal anak, orang tua dapat menulis **komentar**
+  (maks. 2000 karakter). Komentar tersimpan permanen pada jurnal tersebut.
+- Saat komentar dikirim, **notifikasi** otomatis terkirim ke **siswa** dan
+  **Guru Wali aktif** anak itu.
+- Komentar tampil di tiga tempat: halaman detail jurnal orang tua, halaman
+  **periksa Guru Wali** (di atas form verifikasi), dan halaman **riwayat
+  jurnal siswa** — sehingga ketiga pihak melihat percakapan yang sama.
+- Hanya orang tua yang bisa **menulis** komentar pada fase ini; pihak lain
+  hanya membaca.

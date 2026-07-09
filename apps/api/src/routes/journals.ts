@@ -17,6 +17,7 @@ import {
   teacherStudent,
   evidenceRequirements,
 } from "../db/schema";
+import { listComments } from "../services/comments";
 import type { Database } from "../db/client";
 import type { Env, Variables } from "../index";
 
@@ -333,7 +334,11 @@ journalsRoute.get(
       journal.studentId,
       journal.journalDate
     );
-    return c.json({ data: { journal, items, verification, evidenceRequirement } });
+    // Komentar orang tua (Fase 7) ikut ditampilkan ke siswa pemilik jurnal.
+    const commentList = await listComments(db, journal.id);
+    return c.json({
+      data: { journal, items, verification, evidenceRequirement, comments: commentList },
+    });
   }
 );
 

@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq } from "drizzle-orm";
-import { users, roles, teachers, students } from "@sjk/api/src/db/schema";
+import { users, roles, teachers, students, principals } from "@sjk/api/src/db/schema";
 import type { Role } from "@sjk/shared";
 import { verifyPassword } from "@sjk/shared";
 
@@ -14,9 +14,11 @@ import { verifyPassword } from "@sjk/shared";
  * `students`. Untuk Admin & Kepala Sekolah, penugasan ke sekolah tertentu
  * belum dimodelkan di Fase 1-2 (mereka bisa mengelola lintas sekolah jika
  * yayasan punya lebih dari satu). schoolId untuk kedua role tersebut
- * dikembalikan `null` untuk saat ini; jika ke depannya dibutuhkan
- * pembatasan Admin per sekolah, tambahkan tabel relasi `user_school` di
- * Fase 4 mengikuti pola `teacher_student`.
+ * dikembalikan `null` untuk saat ini.
+ * Pembaruan Fase 7: Kepala Sekolah kini punya profil `principals`
+ * (userId -> schoolId) sehingga schoolId-nya ikut terisi di JWT dan
+ * endpoint analytics dapat membatasi data per sekolah. Admin tetap
+ * lintas sekolah (null).
  */
 async function resolveSchoolId(
   db: ReturnType<typeof drizzle>,
@@ -36,6 +38,14 @@ async function resolveSchoolId(
       .select({ schoolId: students.schoolId })
       .from(students)
       .where(eq(students.userId, userId))
+      .limit(1);
+    return row?.schoolId ?? null;
+  }
+  if (role === "kepala_sekolah") {
+    const [row] = await db
+      .select({ schoolId: principals.schoolId })
+      .from(principals)
+      .where(eq(principals.userId, userId))
       .limit(1);
     return row?.schoolId ?? null;
   }

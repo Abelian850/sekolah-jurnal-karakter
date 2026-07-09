@@ -125,6 +125,26 @@ export const teachers = pgTable("teachers", {
   isGuruWali: boolean("is_guru_wali").notNull().default(false),
 });
 
+/**
+ * Profil Kepala Sekolah (Fase 7). Mengikuti pola profil teachers/students:
+ * users menyimpan kredensial, tabel profil menyimpan schoolId + identitas.
+ * userId unik (satu akun = satu profil); schoolId sengaja TIDAK unik agar
+ * masa transisi (pergantian kepala sekolah) tidak terblokir constraint.
+ * resolveSchoolId di apps/web/lib/auth.ts membaca schoolId dari sini.
+ */
+export const principals = pgTable("principals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: "cascade" }),
+  schoolId: uuid("school_id")
+    .notNull()
+    .references(() => schools.id, { onDelete: "cascade" }),
+  fullName: varchar("full_name", { length: 255 }).notNull(),
+  phone: varchar("phone", { length: 30 }),
+});
+
 export const students = pgTable(
   "students",
   {
@@ -317,6 +337,30 @@ export const verifications = pgTable("verifications", {
   verifiedAt: timestamp("verified_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Komentar pada jurnal (Fase 7). Ditulis oleh Orang Tua (COMMENT_CREATE)
+ * pada jurnal anaknya; dibaca oleh Guru Wali saat verifikasi dan oleh
+ * siswa pemilik jurnal. userId menunjuk users (bukan parents) supaya
+ * ke depan guru wali/siswa juga bisa membalas tanpa migrasi ulang.
+ */
+export const comments = pgTable(
+  "comments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    journalId: uuid("journal_id")
+      .notNull()
+      .references(() => journals.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    body: text("body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    journalIdx: index("comments_journal_idx").on(table.journalId),
+  })
+);
+
 export const notifications = pgTable("notifications", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id")
@@ -383,6 +427,16 @@ export const teacherStudentRelations = relations(teacherStudent, ({ one }) => ({
   }),
 }));
 
+export const principalsRelations = relations(principals, ({ one }) => ({
+  school: one(schools, { fields: [principals.schoolId], references: [schools.id] }),
+  user: one(users, { fields: [principals.userId], references: [users.id] }),
+}));
+
+export const commentsRelations = relations(comments, ({ one }) => ({
+  journal: one(journals, { fields: [comments.journalId], references: [journals.id] }),
+  user: one(users, { fields: [comments.userId], references: [users.id] }),
+}));
+
 export const journalsRelations = relations(journals, ({ one, many }) => ({
   student: one(students, { fields: [journals.studentId], references: [students.id] }),
   template: one(journalTemplates, {
@@ -394,6 +448,7 @@ export const journalsRelations = relations(journals, ({ one, many }) => ({
     fields: [journals.id],
     references: [verifications.journalId],
   }),
+  comments: many(comments),
 }));
 
 export const journalItemsRelations = relations(journalItems, ({ one }) => ({

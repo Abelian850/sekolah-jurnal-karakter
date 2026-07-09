@@ -19,6 +19,7 @@ import {
   parents,
   auditLogs,
 } from "../db/schema";
+import { listComments } from "../services/comments";
 import type { Database } from "../db/client";
 import type { Env, Variables } from "../index";
 
@@ -233,6 +234,9 @@ verificationsRoute.get(
       evidenceRequirement = req ?? null;
     }
 
+    // Komentar orang tua (Fase 7) tampil di halaman periksa guru wali.
+    const commentList = await listComments(db, row.journal.id);
+
     return c.json({
       data: {
         journal: row.journal,
@@ -240,6 +244,7 @@ verificationsRoute.get(
         items,
         verification: verification ?? null,
         evidenceRequirement,
+        comments: commentList,
       },
     });
   }

@@ -17,6 +17,9 @@ import { journalsRoute } from "./routes/journals";
 import { verificationsRoute } from "./routes/verifications";
 import { notificationsRoute } from "./routes/notifications";
 import { evidenceRequirementsRoute } from "./routes/evidence-requirements";
+import { principalsRoute } from "./routes/principals";
+import { analyticsRoute } from "./routes/analytics";
+import { childrenRoute } from "./routes/children";
 import type { AppJwtPayload } from "@sjk/shared";
 
 /**
@@ -77,6 +80,9 @@ app.route("/journals", journalsRoute);
 app.route("/verifications", verificationsRoute);
 app.route("/notifications", notificationsRoute);
 app.route("/evidence-requirements", evidenceRequirementsRoute);
+app.route("/principals", principalsRoute);
+app.route("/analytics", analyticsRoute);
+app.route("/children", childrenRoute);
 
 // ---------- Error handler global ----------
 app.onError((err, c) => {

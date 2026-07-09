@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { formatDateID } from "@/lib/date";
 import { JournalItemsView, type JournalItemData } from "@/components/journal-items-view";
+import { CommentsList, type CommentData } from "@/components/comments-list";
 
 interface Journal {
   id: string;
@@ -31,19 +32,25 @@ export default async function RiwayatJurnalDetailPage({
 }) {
   const { id } = await params;
 
-  let data: { journal: Journal; items: JournalItemData[]; verification: Verification | null };
+  let data: {
+    journal: Journal;
+    items: JournalItemData[];
+    verification: Verification | null;
+    comments: CommentData[];
+  };
   try {
     data = await apiFetch<{
       journal: Journal;
       items: JournalItemData[];
       verification: Verification | null;
+      comments: CommentData[];
     }>(`/journals/${id}`);
   } catch (err) {
     if (err instanceof ApiRequestError && err.statusCode === 404) notFound();
     throw err;
   }
 
-  const { journal, items, verification } = data;
+  const { journal, items, verification, comments } = data;
 
   return (
     <div className="glass-panel rounded-2xl p-6">
@@ -77,6 +84,8 @@ export default async function RiwayatJurnalDetailPage({
       )}
 
       <JournalItemsView items={items} />
+
+      <CommentsList comments={comments} />
     </div>
   );
 }
