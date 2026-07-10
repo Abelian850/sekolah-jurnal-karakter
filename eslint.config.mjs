@@ -7,7 +7,17 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    ignores: ["**/dist/**", "**/.next/**", "**/.wrangler/**", "**/node_modules/**", "drizzle/**"],
+    // *.config.js CommonJS (postcss dll.) memicu no-undef 'module' pada flat
+    // config — file konfigurasi tooling tidak perlu dilint.
+    ignores: [
+      "**/dist/**",
+      "**/.next/**",
+      "**/.open-next/**",
+      "**/.wrangler/**",
+      "**/node_modules/**",
+      "drizzle/**",
+      "**/*.config.js",
+    ],
   },
   {
     rules: {
