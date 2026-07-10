@@ -371,3 +371,36 @@ Login sebagai orang tua (akun dibuat Admin di Fase 4):
   jurnal siswa** — sehingga ketiga pihak melihat percakapan yang sama.
 - Hanya orang tua yang bisa **menulis** komentar pada fase ini; pihak lain
   hanya membaca.
+
+## Fase 8 — Landing Page & Polish UI/UX
+
+### Landing Page
+
+Halaman publik di `/` (tanpa login) kini berisi profil aplikasi:
+
+1. **Hero** — nama aplikasi, badge "7 Kebiasaan Anak Indonesia Hebat",
+   tombol **Masuk ke Sistem** dan **Lihat Fitur**.
+2. **7 Kebiasaan** — daftar ketujuh kebiasaan yang menjadi dasar jurnal.
+3. **Fitur per peran** — kartu ringkas untuk Peserta Didik, Guru Wali,
+   Kepala Sekolah, Orang Tua, dan Admin Sekolah.
+4. **Alur kerja** — 4 langkah: siswa mengisi → guru wali memverifikasi →
+   orang tua mendampingi → kepala sekolah memantau.
+5. **FAQ** — pertanyaan umum (beda Guru Wali vs Wali Kelas, login NISN,
+   foto bukti, pemisahan data antar sekolah). Dibuat dengan elemen
+   `<details>` native sehingga tidak butuh JavaScript.
+
+Navigasi header (Fitur / Alur / FAQ) melompat ke bagian terkait; tombol
+**Masuk** selalu terlihat di kanan atas.
+
+### Polish UI/UX
+
+- **Halaman login** — kini senada dengan landing (gradien brand di atas,
+  judul aplikasi) dan punya tautan **← Kembali ke beranda**.
+- **Loading state global** (`app/loading.tsx`) — spinner "Memuat…" tampil
+  saat berpindah halaman yang datanya masih diambil.
+- **Halaman 404** (`app/not-found.tsx`) — alamat salah tidak lagi
+  menampilkan 404 default Next.js, melainkan halaman ramah dengan tombol
+  kembali ke beranda.
+- **Error boundary** (`app/error.tsx`) — jika terjadi error tak terduga,
+  pengguna melihat pesan ramah + tombol **Coba lagi** (beserta kode digest
+  untuk pelaporan), bukan layar kosong.

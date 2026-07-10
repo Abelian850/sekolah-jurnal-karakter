@@ -30,7 +30,13 @@ Aplikasi jurnal karakter dan monitoring peserta didik berbasis relasi **Guru Wal
 > orang tua dapat berkomentar pada jurnal anak (tabel `comments`, notifikasi
 > otomatis ke siswa & guru wali). Jalankan `npm run db:migrate`
 > (migrasi `0004`). Detail di `docs/tutorial-penggunaan.md`.
-- [ ] Fase 8 — Landing Page & polish UI/UX
+- [x] **Fase 8** — Landing Page & polish UI/UX
+
+> ℹ️ **Catatan Fase 8:** Landing page publik final di `apps/web/app/page.tsx`
+> (hero, 7 Kebiasaan, fitur per peran, alur kerja, FAQ, CTA) — server
+> component murni tanpa dependensi baru. Polish: halaman login senada
+> landing + tautan kembali, `loading.tsx` global (spinner), `not-found.tsx`
+> (404), dan `error.tsx` (error boundary + tombol Coba lagi).
 - [ ] Fase 9 — Audit log, backup/restore, hardening keamanan
 - [ ] Fase 10 — Dokumentasi & tutorial lengkap
 

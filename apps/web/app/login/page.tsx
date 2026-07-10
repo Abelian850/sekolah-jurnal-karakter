@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 
 /**
  * Satu halaman login untuk seluruh peran (sesuai keputusan Fase 1: satu login,
@@ -39,7 +40,14 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center px-4">
+    <main className="relative flex min-h-screen flex-col items-center justify-center px-4">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[320px] bg-gradient-to-b from-brand-50 to-transparent dark:from-brand-900/20"
+      />
+      <p className="mb-6 text-center text-sm font-semibold tracking-tight">
+        Jurnal Karakter &amp; Monitoring Peserta Didik
+      </p>
       <form
         onSubmit={handleSubmit}
         className="glass-panel w-full max-w-sm rounded-2xl p-8 shadow-sm"
@@ -78,6 +86,12 @@ export default function LoginPage() {
         >
           {loading ? "Memproses..." : "Masuk"}
         </button>
+
+        <p className="mt-5 text-center text-xs text-slate-500">
+          <Link href="/" className="hover:text-brand-600 hover:underline">
+            &larr; Kembali ke beranda
+          </Link>
+        </p>
       </form>
     </main>
   );
