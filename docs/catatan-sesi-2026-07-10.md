@@ -22,6 +22,21 @@ dependensi & JS klien baru:
 Typecheck web lolos (`tsconfig.sandbox.json`). Docs: README Fase 8
 dicentang + blok catatan; tutorial-penggunaan.md bagian Fase 8.
 
+## Tambahan: Redesign UI modern-minimal (ala Pijar Sekolah)
+
+Atas permintaan user (contoh screenshot dashboard Pijar Sekolah):
+
+- `.glass-panel` diredefinisi di globals.css → kartu putih solid
+  (border slate-200/70 + shadow-sm); NAMA KELAS DIPERTAHANKAN sehingga
+  40+ berkas pemakainya tidak disentuh.
+- Latar body → `#f4f6fb` (abu kebiruan terang); palet brand ditambah
+  shade 100/200/700.
+- `admin-sidebar.tsx` → panel biru solid (logo, label "Menu Utama",
+  item pill aktif putih-transparan, sticky).
+- `topbar.tsx` → sapaan "Selamat datang 👋" + chip avatar inisial +
+  tombol Keluar pill (hover merah).
+- 3 nav horizontal (guru-wali/orang-tua/peserta-didik) → pill bulat.
+
 ## Catatan teknis sesi ini
 
 - Push dari sandbox TIDAK bisa: tidak ada kredensial GitHub (gh/token/

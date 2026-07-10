@@ -26,9 +26,9 @@ export function OrangTuaNav({ unreadCount = 0 }: { unreadCount?: number }) {
           <Link
             key={item.href}
             href={item.href}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm transition ${
+            className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm transition ${
               isActive
-                ? "bg-brand-600 text-white"
+                ? "bg-brand-600 font-medium text-white"
                 : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             }`}
           >

@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+/**
+ * Sidebar admin — redesign Fase 8: panel biru solid bergaya modern-minimal
+ * (logo di atas, label grup, item pill dengan state aktif putih-transparan).
+ */
 const NAV_ITEMS = [
   { href: "/dashboard/admin", label: "Ringkasan" },
   { href: "/dashboard/admin/sekolah", label: "Sekolah" },
@@ -20,9 +24,12 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <nav className="glass-panel flex w-60 shrink-0 flex-col gap-1 rounded-2xl p-4">
-      <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-        Administrator
+    <nav className="sticky top-6 flex max-h-[calc(100vh-3rem)] w-60 shrink-0 flex-col gap-1 self-start overflow-y-auto rounded-2xl bg-brand-600 p-4 text-white shadow-sm dark:bg-brand-900">
+      <Link href="/dashboard/admin" className="mb-4 px-2 text-lg font-bold tracking-tight">
+        Jurnal Karakter
+      </Link>
+      <p className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wider text-white/60">
+        Menu Utama
       </p>
       {NAV_ITEMS.map((item) => {
         const isActive =
@@ -32,10 +39,10 @@ export function AdminSidebar() {
           <Link
             key={item.href}
             href={item.href}
-            className={`rounded-lg px-3 py-2 text-sm transition ${
+            className={`rounded-xl px-3 py-2 text-sm transition ${
               isActive
-                ? "bg-brand-600 text-white"
-                : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+                ? "bg-white/20 font-semibold text-white"
+                : "text-white/80 hover:bg-white/10 hover:text-white"
             }`}
           >
             {item.label}

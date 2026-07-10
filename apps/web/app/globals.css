@@ -6,7 +6,8 @@
   color-scheme: light dark;
 }
 
-/* Utility glassmorphism ringan - dipakai konsisten di seluruh dashboard (Fase 3+) */
+/* Kartu solid modern-minimal (redesign Fase 8; sebelumnya glassmorphism).
+   Nama kelas .glass-panel dipertahankan karena dipakai di 40+ berkas. */
 .glass-panel {
-  @apply border border-white/20 bg-white/60 backdrop-blur-md dark:border-white/10 dark:bg-slate-900/60;
+  @apply border border-slate-200/70 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900;
 }
