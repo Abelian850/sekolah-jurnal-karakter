@@ -23,5 +23,23 @@ bucket_name = "sjk-web-cache"
 [env.staging]
 name = "sjk-web-staging"
 
+[[env.staging.services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "sjk-web-staging"
+
+[[env.staging.r2_buckets]]
+binding = "NEXT_INC_CACHE_R2_BUCKET"
+bucket_name = "sjk-web-cache"
+
 [env.production]
 name = "sjk-web-production"
+
+# services & r2_buckets adalah key NON-INHERITABLE di wrangler — harus
+# diulang per environment, kalau tidak worker production kehilangan binding.
+[[env.production.services]]
+binding = "WORKER_SELF_REFERENCE"
+service = "sjk-web-production"
+
+[[env.production.r2_buckets]]
+binding = "NEXT_INC_CACHE_R2_BUCKET"
+bucket_name = "sjk-web-cache"

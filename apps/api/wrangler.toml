@@ -30,5 +30,17 @@ bucket_name = "sjk-journal-photos"
 [env.staging]
 name = "sjk-api-staging"
 
+[[env.staging.r2_buckets]]
+binding = "JOURNAL_BUCKET"
+bucket_name = "sjk-journal-photos"
+
 [env.production]
 name = "sjk-api-production"
+
+# r2_buckets NON-INHERITABLE — wajib diulang per environment.
+[[env.production.r2_buckets]]
+binding = "JOURNAL_BUCKET"
+bucket_name = "sjk-journal-photos"
+
+[env.production.observability]
+enabled = true
