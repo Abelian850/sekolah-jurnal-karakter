@@ -63,6 +63,11 @@ async function resolveSchoolId(
  * di sini menggunakan koneksi Neon HTTP driver (aman dipakai di edge runtime).
  */
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  // WAJIB di luar Vercel (Cloudflare Workers): tanpa ini Auth.js melempar
+  // UntrustedHost dan SEMUA halaman ber-auth() menampilkan "Server error -
+  // There is a problem with the server configuration". Aman di sini karena
+  // request selalu lewat proxy Cloudflare yang menetapkan header Host.
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
