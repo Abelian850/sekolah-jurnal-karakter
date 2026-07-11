@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation";
 
 const NAV_ITEMS = [
   // Halaman verifikasi detail (/verifikasi/[id]) dianggap bagian dari
-  // "Menunggu Verifikasi" agar tab tetap tersorot saat guru memeriksa jurnal.
+  // "Beranda" agar tab tetap tersorot saat guru memeriksa jurnal (daftar
+  // menunggu verifikasi kini menjadi bagian dari dashboard Beranda).
   {
     href: "/dashboard/guru-wali",
-    label: "Menunggu Verifikasi",
+    label: "Beranda",
     match: (p: string) => p === "/dashboard/guru-wali" || p.startsWith("/dashboard/guru-wali/verifikasi"),
   },
   {

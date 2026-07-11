@@ -1,14 +1,28 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { apiFetch } from "@/lib/api-client";
+import { redirect } from "next/navigation";
+import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { getTodayDateWIB } from "@/lib/date";
 
 export async function createTodayJournal() {
-  await apiFetch("/journals", {
-    method: "POST",
-    body: JSON.stringify({ journalDate: getTodayDateWIB() }),
-  });
+  try {
+    await apiFetch("/journals", {
+      method: "POST",
+      body: JSON.stringify({ journalDate: getTodayDateWIB() }),
+    });
+  } catch (err) {
+    // Error konfigurasi (mis. belum ada tahun ajaran/semester/template aktif,
+    // 409 dari resolveActiveSemesterAndTemplate) ditampilkan sebagai pesan di
+    // halaman, bukan runtime error. redirect() melempar NEXT_REDIRECT sehingga
+    // aman dipanggil di dalam catch ini.
+    if (err instanceof ApiRequestError) {
+      redirect(
+        `/dashboard/peserta-didik/jurnal?error=${encodeURIComponent(err.message)}`
+      );
+    }
+    throw err;
+  }
   revalidatePath("/dashboard/peserta-didik/jurnal");
 }
 

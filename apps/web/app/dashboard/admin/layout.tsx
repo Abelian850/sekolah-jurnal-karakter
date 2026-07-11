@@ -8,9 +8,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   await requireRole([ROLES.ADMIN]);
 
   return (
-    <div className="mx-auto flex min-h-screen max-w-6xl gap-6 p-6">
+    <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-4 p-4 sm:gap-6 sm:p-6 lg:flex-row">
       <AdminSidebar />
-      <div className="flex-1">
+      <div className="min-w-0 flex-1">
         <Topbar />
         <main>{children}</main>
       </div>

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { eq, and, asc, desc } from "drizzle-orm";
+import { eq, and, asc, desc, gte, lte, isNotNull, sql } from "drizzle-orm";
 import { PERMISSIONS } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
@@ -312,6 +312,134 @@ journalsRoute.get(
       .orderBy(desc(journals.journalDate));
 
     return c.json({ data: result });
+  }
+);
+
+const statsQuerySchema = z.object({
+  date: z.string().date(),
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Format bulan YYYY-MM"),
+  days: z.coerce.number().int().min(1).max(90).optional().default(30),
+});
+
+/**
+ * GET /journals/stats?date=YYYY-MM-DD&month=YYYY-MM&days=30
+ * Data dashboard Peserta Didik (kalender + diagram):
+ * - distribution : status jurnal milik sendiri `days` hari terakhir
+ * - avgScore     : rata-rata nilai karakter `days` hari terakhir (atau null)
+ * - scoreTrend   : 7 hari terakhir, nilai karakter per tanggal (null = belum dinilai)
+ * - calendar     : status jurnal per tanggal pada bulan `month`
+ *
+ * PENTING: rute ini WAJIB terdaftar SEBELUM GET /:id agar "/stats" tidak
+ * tertangkap sebagai parameter id. "Hari ini" dikirim frontend via ?date=
+ * (WIB, pola sama /journals/today).
+ */
+journalsRoute.get(
+  "/stats",
+  authMiddleware,
+  requirePermission(PERMISSIONS.JOURNAL_VIEW_OWN),
+  zValidator("query", statsQuerySchema),
+  async (c) => {
+    const db = c.get("db");
+    const user = c.get("user");
+    const { date, month, days } = c.req.valid("query");
+
+    const student = await findOwnStudent(db, user.sub);
+    if (!student) return c.json(notFoundStudent, 404);
+
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    const asDate = new Date(`${date}T00:00:00Z`);
+    const rangeStart = iso(new Date(asDate.getTime() - (days - 1) * 86400000));
+    const trendStart = iso(new Date(asDate.getTime() - 6 * 86400000));
+    const [yearNum, monthNum] = month.split("-").map(Number);
+    const monthStart = `${month}-01`;
+    const monthEnd = iso(new Date(Date.UTC(yearNum, monthNum, 0)));
+
+    // ---- Distribusi status jurnal `days` hari terakhir ----
+    const distRows = await db
+      .select({
+        status: journals.status,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(journals)
+      .where(
+        and(
+          eq(journals.studentId, student.id),
+          gte(journals.journalDate, rangeStart),
+          lte(journals.journalDate, date)
+        )
+      )
+      .groupBy(journals.status);
+
+    const distribution = { draft: 0, submitted: 0, approved: 0, rejected: 0 };
+    for (const row of distRows) distribution[row.status] = row.count;
+
+    // ---- Rata-rata nilai karakter `days` hari terakhir ----
+    const [avgRow] = await db
+      .select({
+        avgScore: sql<number | null>`round(avg(${verifications.characterScore}))::int`,
+      })
+      .from(verifications)
+      .innerJoin(journals, eq(verifications.journalId, journals.id))
+      .where(
+        and(
+          eq(journals.studentId, student.id),
+          isNotNull(verifications.characterScore),
+          gte(journals.journalDate, rangeStart),
+          lte(journals.journalDate, date)
+        )
+      );
+
+    // ---- Nilai karakter 7 hari terakhir (satu jurnal per tanggal) ----
+    const scoreRows = await db
+      .select({
+        journalDate: journals.journalDate,
+        score: verifications.characterScore,
+      })
+      .from(verifications)
+      .innerJoin(journals, eq(verifications.journalId, journals.id))
+      .where(
+        and(
+          eq(journals.studentId, student.id),
+          isNotNull(verifications.characterScore),
+          gte(journals.journalDate, trendStart),
+          lte(journals.journalDate, date)
+        )
+      );
+
+    const scoreMap = new Map(scoreRows.map((r) => [r.journalDate, r.score]));
+    const scoreTrend: { date: string; score: number | null }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = iso(new Date(asDate.getTime() - i * 86400000));
+      scoreTrend.push({ date: d, score: scoreMap.get(d) ?? null });
+    }
+
+    // ---- Kalender: status jurnal per tanggal bulan `month` ----
+    const calendar = await db
+      .select({
+        date: journals.journalDate,
+        status: journals.status,
+      })
+      .from(journals)
+      .where(
+        and(
+          eq(journals.studentId, student.id),
+          gte(journals.journalDate, monthStart),
+          lte(journals.journalDate, monthEnd)
+        )
+      )
+      .orderBy(asc(journals.journalDate));
+
+    return c.json({
+      data: {
+        date,
+        month,
+        days,
+        distribution,
+        avgScore: avgRow?.avgScore ?? null,
+        scoreTrend,
+        calendar,
+      },
+    });
   }
 );
 

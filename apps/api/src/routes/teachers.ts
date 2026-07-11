@@ -5,8 +5,8 @@ import { eq } from "drizzle-orm";
 import { PERMISSIONS } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
-import { teachers, auditLogs } from "../db/schema";
-import { createUserAccount, deleteUserAccount } from "../services/user-provisioning";
+import { teachers, users, auditLogs } from "../db/schema";
+import { createUserAccount, deleteUserAccount, getRoleId } from "../services/user-provisioning";
 import type { Env, Variables } from "../index";
 
 export const teachersRoute = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -47,10 +47,13 @@ teachersRoute.post(
     const admin = c.get("user");
     const body = c.req.valid("json");
 
+    // Role login mengikuti status wali: guru wali harus punya role
+    // `guru_wali` agar diarahkan ke /dashboard/guru-wali dan mendapat
+    // permission JOURNAL_VERIFY (lihat ROLE_PERMISSIONS di packages/shared).
     const user = await createUserAccount(db, {
       email: body.email,
       plainPassword: body.password,
-      roleName: "guru",
+      roleName: body.isGuruWali ? "guru_wali" : "guru",
     });
 
     try {
@@ -130,7 +133,7 @@ teachersRoute.post(
         const user = await createUserAccount(db, {
           email: row.email,
           plainPassword: row.password,
-          roleName: "guru",
+          roleName: row.isGuruWali ? "guru_wali" : "guru",
         });
 
         const [teacher] = await db
@@ -183,6 +186,11 @@ teachersRoute.patch(
       .set({ isGuruWali: !existing.isGuruWali })
       .where(eq(teachers.id, id))
       .returning();
+
+    // Sinkronkan role login dengan status wali yang baru. Perubahan role
+    // baru berlaku saat guru tersebut login ulang (role tersimpan di JWT).
+    const newRoleId = await getRoleId(db, updated.isGuruWali ? "guru_wali" : "guru");
+    await db.update(users).set({ roleId: newRoleId }).where(eq(users.id, existing.userId));
 
     await db.insert(auditLogs).values({
       userId: admin.sub,

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { eq, and, asc, desc } from "drizzle-orm";
+import { eq, and, asc, desc, gte, lte, sql } from "drizzle-orm";
 import { PERMISSIONS } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
@@ -183,6 +183,163 @@ verificationsRoute.get(
       .limit(100);
 
     return c.json({ data: result });
+  }
+);
+
+const statsQuerySchema = z.object({
+  date: z.string().date(),
+  month: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Format bulan YYYY-MM"),
+  days: z.coerce.number().int().min(1).max(90).optional().default(30),
+});
+
+/**
+ * GET /verifications/stats?date=YYYY-MM-DD&month=YYYY-MM&days=30
+ * Data dashboard Guru Wali (kartu ringkasan + kalender + diagram):
+ * - counts       : siswa binaan aktif + jurnal menunggu diperiksa (semua waktu)
+ * - verification : distribusi hasil verifikasi guru INI `days` hari terakhir
+ *                  (+ menunggu = submitted binaan yang belum diverifikasi)
+ * - trend        : 7 hari terakhir, jurnal terkirim per tanggal (siswa binaan)
+ * - calendar     : rekap status jurnal binaan per tanggal pada bulan `month`
+ *
+ * "Hari ini" dikirim frontend via ?date= (WIB, pola sama /journals/today).
+ * Semua query diturunkan dari teacher_student aktif milik guru yang login -
+ * tidak pernah menerima teacherId/studentId dari klien (prinsip file ini).
+ */
+verificationsRoute.get(
+  "/stats",
+  authMiddleware,
+  requirePermission(PERMISSIONS.JOURNAL_VERIFY),
+  zValidator("query", statsQuerySchema),
+  async (c) => {
+    const db = c.get("db");
+    const user = c.get("user");
+    const { date, month, days } = c.req.valid("query");
+
+    const teacher = await findOwnTeacher(db, user.sub);
+    if (!teacher) return c.json(notFoundTeacher, 404);
+
+    const iso = (d: Date) => d.toISOString().slice(0, 10);
+    const asDate = new Date(`${date}T00:00:00Z`);
+    const rangeStart = iso(new Date(asDate.getTime() - (days - 1) * 86400000));
+    const trendStart = iso(new Date(asDate.getTime() - 6 * 86400000));
+    const [yearNum, monthNum] = month.split("-").map(Number);
+    const monthStart = `${month}-01`;
+    const monthEnd = iso(new Date(Date.UTC(yearNum, monthNum, 0)));
+
+    // Join standar "jurnal milik siswa binaan aktif guru ini".
+    const binaanJoin = and(
+      eq(teacherStudent.studentId, journals.studentId),
+      eq(teacherStudent.isActive, true)
+    );
+
+    // ---- Kartu ringkasan ----
+    const [binaan] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(teacherStudent)
+      .where(and(eq(teacherStudent.teacherId, teacher.id), eq(teacherStudent.isActive, true)));
+
+    const [pending] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(journals)
+      .innerJoin(teacherStudent, binaanJoin)
+      .where(and(eq(teacherStudent.teacherId, teacher.id), eq(journals.status, "submitted")));
+
+    // ---- Distribusi verifikasi `days` hari terakhir ----
+    const verifRows = await db
+      .select({
+        status: verifications.status,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(verifications)
+      .innerJoin(journals, eq(verifications.journalId, journals.id))
+      .where(
+        and(
+          eq(verifications.teacherId, teacher.id),
+          gte(journals.journalDate, rangeStart),
+          lte(journals.journalDate, date)
+        )
+      )
+      .groupBy(verifications.status);
+
+    const verification = { disetujui: 0, ditolak: 0, revisi: 0, menunggu: 0 };
+    for (const row of verifRows) verification[row.status] = row.count;
+
+    const [waiting] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(journals)
+      .innerJoin(teacherStudent, binaanJoin)
+      .leftJoin(verifications, eq(verifications.journalId, journals.id))
+      .where(
+        and(
+          eq(teacherStudent.teacherId, teacher.id),
+          eq(journals.status, "submitted"),
+          sql`${verifications.id} is null`,
+          gte(journals.journalDate, rangeStart),
+          lte(journals.journalDate, date)
+        )
+      );
+    verification.menunggu = waiting?.count ?? 0;
+
+    // ---- Tren 7 hari terakhir: jurnal binaan terkirim per tanggal ----
+    const trendRows = await db
+      .select({
+        journalDate: journals.journalDate,
+        sent: sql<number>`count(*) filter (where ${journals.status} in ('submitted','approved','rejected'))::int`,
+      })
+      .from(journals)
+      .innerJoin(teacherStudent, binaanJoin)
+      .where(
+        and(
+          eq(teacherStudent.teacherId, teacher.id),
+          gte(journals.journalDate, trendStart),
+          lte(journals.journalDate, date)
+        )
+      )
+      .groupBy(journals.journalDate)
+      .orderBy(asc(journals.journalDate));
+
+    const trendMap = new Map(trendRows.map((r) => [r.journalDate, r.sent]));
+    const trend: { date: string; sent: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = iso(new Date(asDate.getTime() - i * 86400000));
+      trend.push({ date: d, sent: trendMap.get(d) ?? 0 });
+    }
+
+    // ---- Kalender: rekap status jurnal binaan per tanggal bulan `month` ----
+    const calendar = await db
+      .select({
+        date: journals.journalDate,
+        draft: sql<number>`count(*) filter (where ${journals.status} = 'draft')::int`,
+        submitted: sql<number>`count(*) filter (where ${journals.status} = 'submitted')::int`,
+        approved: sql<number>`count(*) filter (where ${journals.status} = 'approved')::int`,
+        rejected: sql<number>`count(*) filter (where ${journals.status} = 'rejected')::int`,
+      })
+      .from(journals)
+      .innerJoin(teacherStudent, binaanJoin)
+      .where(
+        and(
+          eq(teacherStudent.teacherId, teacher.id),
+          gte(journals.journalDate, monthStart),
+          lte(journals.journalDate, monthEnd)
+        )
+      )
+      .groupBy(journals.journalDate)
+      .orderBy(asc(journals.journalDate));
+
+    return c.json({
+      data: {
+        date,
+        month,
+        days,
+        counts: {
+          activeStudents: binaan?.count ?? 0,
+          pending: pending?.count ?? 0,
+        },
+        verification,
+        trend,
+        calendar,
+      },
+    });
   }
 );
 

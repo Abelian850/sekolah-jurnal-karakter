@@ -1,0 +1,10 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./*"],
+      "@sjk/shared": ["../../packages/shared/src/index.ts"],
+      "@sjk/api/src/db/schema": ["../../apps/api/src/db/schema.ts"]
+    }
+  }
+}

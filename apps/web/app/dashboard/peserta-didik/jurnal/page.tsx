@@ -27,7 +27,12 @@ const STATUS_LABELS: Record<Journal["status"], string> = {
   rejected: "Ditolak - hubungi Guru Wali",
 };
 
-export default async function JurnalHariIniPage() {
+export default async function JurnalHariIniPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const { error: actionError } = await searchParams;
   const today = getTodayDateWIB();
 
   let data: {
@@ -65,6 +70,12 @@ export default async function JurnalHariIniPage() {
         </p>
       ) : data === null ? (
         <div>
+          {actionError && (
+            <div className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
+              <p className="font-medium">Jurnal belum bisa dibuat.</p>
+              <p className="mt-1">{actionError}</p>
+            </div>
+          )}
           <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
             Kamu belum membuat jurnal untuk hari ini.
           </p>
