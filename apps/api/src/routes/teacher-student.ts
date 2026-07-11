@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { eq, and } from "drizzle-orm";
-import { PERMISSIONS } from "@sjk/shared";
+import { eq, and, inArray } from "drizzle-orm";
+import { PERMISSIONS, NISN_REGEX } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
-import { teacherStudent, auditLogs } from "../db/schema";
+import { teacherStudent, teachers, students, auditLogs } from "../db/schema";
 import type { Env, Variables } from "../index";
 
 export const teacherStudentRoute = new Hono<{ Bindings: Env; Variables: Variables }>();
@@ -115,6 +115,156 @@ teacherStudentRoute.post(
     });
 
     return c.json({ data: newAssignment }, 201);
+  }
+);
+
+const bulkAssignSchema = z
+  .object({
+    teacherId: z.string().uuid(),
+    academicYearId: z.string().uuid(),
+    /** Mode multi-select: id siswa dari daftar yang sudah dimuat. */
+    studentIds: z.array(z.string().uuid()).max(500).optional(),
+    /** Mode upload/tempel: daftar NISN, dicocokkan ke database siswa. */
+    nisns: z.array(z.string().regex(NISN_REGEX, "NISN harus 5-30 digit angka")).max(500).optional(),
+  })
+  .refine((v) => (v.studentIds?.length ?? 0) + (v.nisns?.length ?? 0) > 0, {
+    message: "Isi studentIds atau nisns (minimal satu siswa)",
+  });
+
+/**
+ * POST /teacher-student/bulk -> menugaskan satu Guru Wali ke BANYAK siswa
+ * sekaligus (revisi Juli 2026). Dua mode input yang bisa digabung:
+ * multi-select (studentIds) dan upload/tempel daftar NISN (nisns) yang
+ * dicocokkan ke database peserta didik.
+ *
+ * Berbeda dengan POST / (tunggal) yang MEMINDAHKAN penugasan lama, bulk
+ * SENGAJA tidak pernah memindahkan: siswa yang sudah punya Guru Wali aktif
+ * pada tahun ajaran tsb dilaporkan sebagai gagal per baris (bukan gagal
+ * total, pola /teachers/bulk) supaya penugasan massal tidak diam-diam
+ * merebut binaan guru lain. Pemindahan tetap lewat form tunggal.
+ */
+teacherStudentRoute.post(
+  "/bulk",
+  authMiddleware,
+  requirePermission(PERMISSIONS.TEACHER_STUDENT_ASSIGN),
+  zValidator("json", bulkAssignSchema),
+  async (c) => {
+    const db = c.get("db");
+    const admin = c.get("user");
+    const { teacherId, academicYearId, studentIds = [], nisns = [] } = c.req.valid("json");
+
+    const [teacher] = await db.select().from(teachers).where(eq(teachers.id, teacherId));
+    if (!teacher) {
+      return c.json({ error: "not_found", message: "Guru tidak ditemukan", statusCode: 404 }, 404);
+    }
+    if (!teacher.isGuruWali) {
+      return c.json(
+        { error: "bad_request", message: "Guru ini bukan Guru Wali", statusCode: 400 },
+        400
+      );
+    }
+
+    // Resolusi sekali jalan (hindari N query): siswa by id dan by NISN.
+    const byId =
+      studentIds.length > 0
+        ? await db
+            .select({ id: students.id, nisn: students.nisn, fullName: students.fullName })
+            .from(students)
+            .where(inArray(students.id, studentIds))
+        : [];
+    const byNisn =
+      nisns.length > 0
+        ? await db
+            .select({ id: students.id, nisn: students.nisn, fullName: students.fullName })
+            .from(students)
+            .where(inArray(students.nisn, nisns))
+        : [];
+    const idMap = new Map(byId.map((s) => [s.id, s]));
+    const nisnMap = new Map(byNisn.map((s) => [s.nisn as string, s]));
+
+    // Daftar target terurut sesuai input; identifier dipakai di laporan.
+    const targets: Array<{ identifier: string; student?: { id: string; fullName: string } }> = [
+      ...studentIds.map((id) => ({ identifier: id, student: idMap.get(id) })),
+      ...nisns.map((nisn) => ({ identifier: `NISN ${nisn}`, student: nisnMap.get(nisn) })),
+    ];
+
+    const results: Array<{ row: number; identifier: string; success: boolean; message?: string }> =
+      [];
+    const seen = new Set<string>();
+
+    for (let i = 0; i < targets.length; i++) {
+      const { identifier, student } = targets[i];
+      const label = student ? `${student.fullName} (${identifier})` : identifier;
+      try {
+        if (!student) {
+          results.push({
+            row: i + 1,
+            identifier,
+            success: false,
+            message: `${identifier} tidak ditemukan di database peserta didik`,
+          });
+          continue;
+        }
+        if (seen.has(student.id)) {
+          results.push({
+            row: i + 1,
+            identifier: label,
+            success: false,
+            message: "Duplikat di daftar yang sama - dilewati",
+          });
+          continue;
+        }
+        seen.add(student.id);
+
+        const [currentAssignment] = await db
+          .select()
+          .from(teacherStudent)
+          .where(
+            and(
+              eq(teacherStudent.studentId, student.id),
+              eq(teacherStudent.academicYearId, academicYearId),
+              eq(teacherStudent.isActive, true)
+            )
+          );
+        if (currentAssignment) {
+          results.push({
+            row: i + 1,
+            identifier: label,
+            success: false,
+            message:
+              currentAssignment.teacherId === teacherId
+                ? "Sudah dibina Guru Wali ini"
+                : "Sudah punya Guru Wali aktif - pindahkan lewat form penugasan tunggal",
+          });
+          continue;
+        }
+
+        const [newAssignment] = await db
+          .insert(teacherStudent)
+          .values({ teacherId, studentId: student.id, academicYearId })
+          .returning();
+
+        await db.insert(auditLogs).values({
+          userId: admin.sub,
+          action: "create",
+          tableName: "teacher_student",
+          recordId: newAssignment.id,
+          newValue: newAssignment,
+          ipAddress: c.req.header("cf-connecting-ip") ?? null,
+        });
+
+        results.push({ row: i + 1, identifier: label, success: true });
+      } catch (err) {
+        results.push({
+          row: i + 1,
+          identifier: label,
+          success: false,
+          message: (err as Error).message,
+        });
+      }
+    }
+
+    return c.json({ data: results });
   }
 );
 
