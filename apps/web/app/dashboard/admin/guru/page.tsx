@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "@/lib/api-client";
+import { ResetTeacherPasswordButton } from "@/components/reset-teacher-password-button";
 
 interface Teacher {
   id: string;
@@ -12,7 +13,9 @@ interface Teacher {
 
 async function toggleGuruWali(id: string) {
   "use server";
-  await apiFetch(`/teachers/${id}/toggle-guru-wali`, { method: "PATCH" });
+  // Path harus sama persis dengan rute API: PATCH /teachers/:id/toggle-wali
+  // (dulu salah "toggle-guru-wali" sehingga tombol tidak pernah bekerja).
+  await apiFetch(`/teachers/${id}/toggle-wali`, { method: "PATCH" });
   revalidatePath("/dashboard/admin/guru");
 }
 
@@ -23,12 +26,20 @@ export default async function GuruListPage() {
     <div className="glass-panel rounded-2xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-semibold">Guru</h1>
-        <Link
-          href="/dashboard/admin/guru/baru"
-          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500"
-        >
-          + Tambah Guru
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/dashboard/admin/guru/impor"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+          >
+            Impor Excel
+          </Link>
+          <Link
+            href="/dashboard/admin/guru/baru"
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500"
+          >
+            + Tambah Guru
+          </Link>
+        </div>
       </div>
 
       {teachers.length === 0 ? (
@@ -62,11 +73,18 @@ export default async function GuruListPage() {
                   )}
                 </td>
                 <td className="py-2">
-                  <form action={toggleGuruWali.bind(null, t.id)}>
-                    <button className="text-xs font-medium text-brand-600 hover:underline">
-                      {t.isGuruWali ? "Cabut status Guru Wali" : "Jadikan Guru Wali"}
-                    </button>
-                  </form>
+                  <div className="flex items-center gap-3">
+                    <form action={toggleGuruWali.bind(null, t.id)}>
+                      <button className="text-xs font-medium text-brand-600 hover:underline">
+                        {t.isGuruWali ? "Cabut status Guru Wali" : "Jadikan Guru Wali"}
+                      </button>
+                    </form>
+                    <ResetTeacherPasswordButton
+                      teacherId={t.id}
+                      teacherName={t.fullName}
+                      nip={t.nip}
+                    />
+                  </div>
                 </td>
               </tr>
             ))}

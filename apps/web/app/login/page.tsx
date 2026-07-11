@@ -31,7 +31,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result?.error) {
-      setError("Email/NISN atau kata sandi salah.");
+      setError("Email/NISN/NIP atau kata sandi salah.");
       return;
     }
 
@@ -54,17 +54,17 @@ export default function LoginPage() {
       >
         <h1 className="mb-6 text-center text-xl font-semibold">Masuk</h1>
 
-        <label className="mb-1 block text-sm font-medium">Email atau NISN</label>
+        <label className="mb-1 block text-sm font-medium">Email, NISN, atau NIP</label>
         <input
           type="text"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="mb-4 w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80"
-          placeholder="nama@sekolah.sch.id / NISN"
+          placeholder="nama@sekolah.sch.id / NISN / NIP"
         />
         <p className="-mt-3 mb-3 text-xs text-slate-500">
-          Peserta didik: masukkan NISN sebagai username dan kata sandi.
+          Peserta didik: NISN sebagai username dan kata sandi awal. Guru: NIP sebagai username dan kata sandi awal.
         </p>
 
         <label className="mb-1 block text-sm font-medium">Kata Sandi</label>

@@ -70,7 +70,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email atau NISN", type: "text" },
+        email: { label: "Email / NISN / NIP", type: "text" },
         password: { label: "Kata Sandi", type: "password" },
       },
       authorize: async (credentials) => {
@@ -82,11 +82,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const sql = neon(process.env.DATABASE_URL as string);
         const db = drizzle(sql);
 
-        // Identifier tanpa "@" diperlakukan sebagai NISN siswa (pasca-Fase 6:
-        // username login siswa = NISN). Resolusi tetap lewat tabel students
-        // (sumber kebenaran), BUKAN dengan menebak email "<nisn>@siswa.internal",
-        // agar siswa lama yang emailnya bukan format internal tetap bisa login
-        // dengan NISN mereka.
+        // Identifier tanpa "@" diperlakukan sebagai NISN siswa ATAU NIP guru
+        // (pasca-Fase 6 siswa login dengan NISN; revisi Juli 2026 guru login
+        // dengan NIP). Resolusi lewat tabel students lalu teachers (sumber
+        // kebenaran), BUKAN dengan menebak email "<nisn>@siswa.internal" /
+        // "<nip>@guru.internal", agar akun lama yang emailnya bukan format
+        // internal tetap bisa login dengan NISN/NIP mereka. NISN dicek dulu
+        // karena populasinya jauh lebih besar; tabrakan NISN vs NIP praktis
+        // mustahil (NISN 10 digit vs NIP 18 digit).
         const email = identifier.includes("@") ? identifier.toLowerCase() : null;
         const trimmed = identifier.trim();
 
@@ -97,8 +100,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             .from(students)
             .where(eq(students.nisn, trimmed))
             .limit(1);
-          if (!studentRow) return null;
-          userId = studentRow.userId;
+          if (studentRow) {
+            userId = studentRow.userId;
+          } else {
+            const [teacherRow] = await db
+              .select({ userId: teachers.userId })
+              .from(teachers)
+              .where(eq(teachers.nip, trimmed))
+              .limit(1);
+            if (!teacherRow) return null;
+            userId = teacherRow.userId;
+          }
         }
 
         const [row] = await db

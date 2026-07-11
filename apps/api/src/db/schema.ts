@@ -119,7 +119,7 @@ export const teachers = pgTable("teachers", {
   schoolId: uuid("school_id")
     .notNull()
     .references(() => schools.id, { onDelete: "cascade" }),
-  nip: varchar("nip", { length: 30 }),
+  nip: varchar("nip", { length: 30 }).unique(),
   fullName: varchar("full_name", { length: 255 }).notNull(),
   phone: varchar("phone", { length: 30 }),
   isGuruWali: boolean("is_guru_wali").notNull().default(false),

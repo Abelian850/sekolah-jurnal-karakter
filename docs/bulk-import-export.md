@@ -52,6 +52,19 @@ EXPORT:
 nis | nisn | fullName | className | gradeLevel | gender | birthDate
 ```
 
+**Import Guru** (`/dashboard/admin/guru/impor`, revisi Juli 2026):
+```
+nip | fullName | email | phone | isGuruWali
+```
+
+> Hanya `nip` (5-30 digit angka, wajib unik) dan `fullName` yang wajib.
+> Akun login dibuat otomatis: username = **NIP**, kata sandi awal = **NIP**,
+> email internal `<nip>@guru.internal` jika kolom email kosong (lihat
+> `packages/shared/src/teachers.ts`). `isGuruWali` menerima `ya`/`tidak`,
+> `true`/`false`, `1`/`0`. Template contoh dapat diunduh langsung dari
+> halaman impor (tombol "Unduh Template Excel") atau di
+> [`docs/templates/template-import-guru.xlsx`](./templates/template-import-guru.xlsx).
+
 > **Pembaruan pasca-Fase 6:** kolom `email` dan `password` DIHAPUS. Akun
 > login siswa dibuat otomatis oleh backend: username = **NISN**, kata sandi
 > awal = **NISN**, email internal = `<nisn>@siswa.internal` (lihat

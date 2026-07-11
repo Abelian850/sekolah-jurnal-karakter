@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { PERMISSIONS } from "@sjk/shared";
+import { PERMISSIONS, nipToEmail, NIP_REGEX, hashPassword } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
 import { teachers, users, auditLogs } from "../db/schema";
@@ -11,15 +11,29 @@ import type { Env, Variables } from "../index";
 
 export const teachersRoute = new Hono<{ Bindings: Env; Variables: Variables }>();
 
-const createTeacherSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(8),
-  schoolId: z.string().uuid(),
-  nip: z.string().max(30).optional(),
+/**
+ * KONVENSI AKUN GURU (revisi Juli 2026, meniru konvensi siswa/NISN):
+ * - NIP wajib & unik (5-30 digit angka, lihat NIP_REGEX di packages/shared).
+ * - Login = NIP ATAU email; kata sandi awal = NIP.
+ * - Email opsional; jika kosong dibuat otomatis nipToEmail(nip) ->
+ *   "<nip>@guru.internal".
+ * - Kata sandi dapat direset kembali ke NIP via PATCH /:id/reset-password.
+ */
+const teacherFields = {
+  nip: z.string().regex(NIP_REGEX, "NIP harus berupa 5-30 digit angka"),
   fullName: z.string().min(3).max(255),
+  email: z.string().email().optional(),
   phone: z.string().max(30).optional(),
   isGuruWali: z.boolean().default(false),
-});
+};
+
+const createTeacherSchema = z.object({ schoolId: z.string().uuid(), ...teacherFields });
+
+/** Pesan error ramah saat NIP sudah terdaftar (cek dini sebelum insert). */
+async function findTeacherByNip(db: Parameters<typeof createUserAccount>[0], nip: string) {
+  const [row] = await db.select({ id: teachers.id }).from(teachers).where(eq(teachers.nip, nip));
+  return row;
+}
 
 teachersRoute.get(
   "/",
@@ -47,12 +61,19 @@ teachersRoute.post(
     const admin = c.get("user");
     const body = c.req.valid("json");
 
+    if (await findTeacherByNip(db, body.nip)) {
+      return c.json(
+        { error: "conflict", message: `NIP ${body.nip} sudah terdaftar`, statusCode: 409 },
+        409
+      );
+    }
+
     // Role login mengikuti status wali: guru wali harus punya role
     // `guru_wali` agar diarahkan ke /dashboard/guru-wali dan mendapat
     // permission JOURNAL_VERIFY (lihat ROLE_PERMISSIONS di packages/shared).
     const user = await createUserAccount(db, {
-      email: body.email,
-      plainPassword: body.password,
+      email: body.email ?? nipToEmail(body.nip),
+      plainPassword: body.nip,
       roleName: body.isGuruWali ? "guru_wali" : "guru",
     });
 
@@ -90,19 +111,7 @@ teachersRoute.post(
 
 const bulkTeacherSchema = z.object({
   schoolId: z.string().uuid(),
-  rows: z
-    .array(
-      z.object({
-        email: z.string().email(),
-        password: z.string().min(8),
-        nip: z.string().max(30).optional(),
-        fullName: z.string().min(3).max(255),
-        phone: z.string().max(30).optional(),
-        isGuruWali: z.boolean().default(false),
-      })
-    )
-    .min(1)
-    .max(500),
+  rows: z.array(z.object(teacherFields)).min(1).max(500),
 });
 
 /**
@@ -114,6 +123,9 @@ const bulkTeacherSchema = z.object({
  * gagal tidak menggagalkan baris lain (bukan all-or-nothing), sesuai
  * batasan transaksi Neon HTTP driver yang sudah dijelaskan di
  * user-provisioning.ts. Ringkasan sukses/gagal dikembalikan per baris.
+ *
+ * Pasca-revisi Juli 2026: kolom email & password TIDAK wajib lagi -
+ * akun dibuat dengan sandi awal = NIP, email otomatis dari NIP jika kosong.
  */
 teachersRoute.post(
   "/bulk",
@@ -130,32 +142,42 @@ teachersRoute.post(
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       try {
+        if (await findTeacherByNip(db, row.nip)) {
+          results.push({ row: i + 1, success: false, message: `NIP ${row.nip} sudah terdaftar` });
+          continue;
+        }
+
         const user = await createUserAccount(db, {
-          email: row.email,
-          plainPassword: row.password,
+          email: row.email ?? nipToEmail(row.nip),
+          plainPassword: row.nip,
           roleName: row.isGuruWali ? "guru_wali" : "guru",
         });
 
-        const [teacher] = await db
-          .insert(teachers)
-          .values({
-            userId: user.id,
-            schoolId,
-            nip: row.nip,
-            fullName: row.fullName,
-            phone: row.phone,
-            isGuruWali: row.isGuruWali,
-          })
-          .returning();
+        try {
+          const [teacher] = await db
+            .insert(teachers)
+            .values({
+              userId: user.id,
+              schoolId,
+              nip: row.nip,
+              fullName: row.fullName,
+              phone: row.phone,
+              isGuruWali: row.isGuruWali,
+            })
+            .returning();
 
-        await db.insert(auditLogs).values({
-          userId: admin.sub,
-          action: "create",
-          tableName: "teachers",
-          recordId: teacher.id,
-          newValue: teacher,
-          ipAddress: c.req.header("cf-connecting-ip") ?? null,
-        });
+          await db.insert(auditLogs).values({
+            userId: admin.sub,
+            action: "create",
+            tableName: "teachers",
+            recordId: teacher.id,
+            newValue: teacher,
+            ipAddress: c.req.header("cf-connecting-ip") ?? null,
+          });
+        } catch (err) {
+          await deleteUserAccount(db, user.id);
+          throw err;
+        }
 
         results.push({ row: i + 1, success: true });
       } catch (err) {
@@ -164,6 +186,52 @@ teachersRoute.post(
     }
 
     return c.json({ data: results });
+  }
+);
+
+/**
+ * PATCH /teachers/:id/reset-password - reset kata sandi guru kembali ke
+ * NIP-nya. Untuk guru lama (dibuat sebelum konvensi login-NIP) atau guru
+ * yang lupa kata sandi. Hanya Admin (TEACHER_MANAGE).
+ */
+teachersRoute.patch(
+  "/:id/reset-password",
+  authMiddleware,
+  requirePermission(PERMISSIONS.TEACHER_MANAGE),
+  async (c) => {
+    const db = c.get("db");
+    const admin = c.get("user");
+    const id = c.req.param("id");
+
+    const [teacher] = await db.select().from(teachers).where(eq(teachers.id, id));
+    if (!teacher) {
+      return c.json({ error: "not_found", message: "Guru tidak ditemukan", statusCode: 404 }, 404);
+    }
+    if (!teacher.nip) {
+      return c.json(
+        {
+          error: "bad_request",
+          message:
+            "Guru ini belum memiliki NIP, jadi kata sandi tidak bisa direset ke NIP. Lengkapi NIP-nya dulu.",
+          statusCode: 400,
+        },
+        400
+      );
+    }
+
+    const passwordHash = await hashPassword(teacher.nip);
+    await db.update(users).set({ passwordHash }).where(eq(users.id, teacher.userId));
+
+    await db.insert(auditLogs).values({
+      userId: admin.sub,
+      action: "reset_password",
+      tableName: "users",
+      recordId: teacher.userId,
+      newValue: { resetTo: "nip", teacherId: teacher.id },
+      ipAddress: c.req.header("cf-connecting-ip") ?? null,
+    });
+
+    return c.json({ data: { ok: true } });
   }
 );
 

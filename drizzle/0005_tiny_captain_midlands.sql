@@ -1,0 +1,1 @@
+ALTER TABLE "teachers" ADD CONSTRAINT "teachers_nip_unique" UNIQUE("nip");

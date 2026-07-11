@@ -6,17 +6,21 @@ interface School {
   name: string;
 }
 
+/**
+ * Pasca-revisi Juli 2026: admin TIDAK mengisi kata sandi. Akun guru dibuat
+ * otomatis: login = NIP (atau email), kata sandi awal = NIP. Email opsional -
+ * jika kosong dibuat otomatis "<nip>@guru.internal" oleh backend.
+ */
 async function createTeacher(formData: FormData) {
   "use server";
 
   await apiFetch("/teachers", {
     method: "POST",
     body: JSON.stringify({
-      email: formData.get("email"),
-      password: formData.get("password"),
       schoolId: formData.get("schoolId"),
-      nip: formData.get("nip") || undefined,
+      nip: formData.get("nip"),
       fullName: formData.get("fullName"),
+      email: formData.get("email") || undefined,
       phone: formData.get("phone") || undefined,
       isGuruWali: formData.get("isGuruWali") === "on",
     }),
@@ -30,7 +34,10 @@ export default async function GuruBaruPage() {
 
   return (
     <div className="glass-panel max-w-lg rounded-2xl p-6">
-      <h1 className="mb-4 text-xl font-semibold">Tambah Guru</h1>
+      <h1 className="mb-1 text-xl font-semibold">Tambah Guru</h1>
+      <p className="mb-4 text-sm text-slate-500">
+        Akun login dibuat otomatis: username = NIP (atau email), kata sandi awal = NIP.
+      </p>
 
       <form action={createTeacher} className="flex flex-col gap-4">
         <div>
@@ -59,32 +66,26 @@ export default async function GuruBaruPage() {
         </div>
 
         <div>
-          <label className="mb-1 block text-sm font-medium">Email (untuk login)</label>
+          <label className="mb-1 block text-sm font-medium">NIP (untuk login &amp; kata sandi awal)</label>
+          <input
+            name="nip"
+            required
+            pattern="\d{5,30}"
+            title="5-30 digit angka"
+            className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium">Email (opsional)</label>
           <input
             type="email"
             name="email"
-            required
             className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80"
           />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">Kata Sandi Awal</label>
-          <input
-            type="password"
-            name="password"
-            required
-            minLength={8}
-            className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80"
-          />
-        </div>
-
-        <div>
-          <label className="mb-1 block text-sm font-medium">NIP (opsional)</label>
-          <input
-            name="nip"
-            className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80"
-          />
+          <p className="mt-1 text-xs text-slate-500">
+            Jika kosong, email internal dibuat otomatis dari NIP.
+          </p>
         </div>
 
         <div>
