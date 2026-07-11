@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import {
-  createJournalTemplate,
-  type NewTemplateItem,
-} from "@/app/dashboard/admin/jurnal-template/baru/actions";
+import { FIXED_JOURNAL_ITEMS } from "@sjk/shared";
+import type { CreateTemplateInput, NewTemplateItem } from "@/lib/template-actions";
 
 interface School {
   id: string;
@@ -21,41 +19,86 @@ const ITEM_TYPES: Array<{ value: NewTemplateItem["itemType"]; label: string }> =
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80";
 
-export function JournalTemplateCreateForm({ schools }: { schools: School[] }) {
-  const [schoolId, setSchoolId] = useState(schools[0]?.id ?? "");
+interface FixedRowState {
+  requiresPhoto: boolean;
+}
+
+/**
+ * Form pembuatan template jurnal (revisi Juli 2026), dipakai dua dashboard:
+ * - Admin: prop `schools` diisi -> ada pilihan sekolah.
+ * - Guru Wali: `schools` kosong/undefined -> tanpa pilihan sekolah, API
+ *   mengunci ke sekolah guru sendiri.
+ * 7 kebiasaan tetap (FIXED_JOURNAL_ITEMS) selalu ikut terkirim dengan
+ * keterangan contohnya dan tidak bisa dihapus; guru hanya memilih item mana
+ * yang butuh bukti foto (default). Item tambahan opsional.
+ */
+export function JournalTemplateCreateForm({
+  schools,
+  onCreate,
+}: {
+  schools?: School[];
+  onCreate: (input: CreateTemplateInput) => Promise<void>;
+}) {
+  const [schoolId, setSchoolId] = useState(schools?.[0]?.id ?? "");
   const [name, setName] = useState("");
-  const [items, setItems] = useState<NewTemplateItem[]>([
-    { itemName: "", itemType: "checklist" },
-  ]);
+  const [fixedRows, setFixedRows] = useState<FixedRowState[]>(
+    FIXED_JOURNAL_ITEMS.map(() => ({ requiresPhoto: false }))
+  );
+  const [extraItems, setExtraItems] = useState<NewTemplateItem[]>([]);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  function updateItem(index: number, patch: Partial<NewTemplateItem>) {
-    setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)));
+  function toggleFixedPhoto(index: number) {
+    setFixedRows((prev) =>
+      prev.map((r, i) => (i === index ? { requiresPhoto: !r.requiresPhoto } : r))
+    );
   }
 
-  function addRow() {
-    setItems((prev) => [...prev, { itemName: "", itemType: "checklist" }]);
+  function updateExtra(index: number, patch: Partial<NewTemplateItem>) {
+    setExtraItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)));
   }
 
-  function removeRow(index: number) {
-    setItems((prev) => prev.filter((_, i) => i !== index));
+  function addExtraRow() {
+    setExtraItems((prev) => [
+      ...prev,
+      { itemName: "", itemType: "checklist", description: "", requiresPhoto: false },
+    ]);
+  }
+
+  function removeExtraRow(index: number) {
+    setExtraItems((prev) => prev.filter((_, i) => i !== index));
   }
 
   function handleSubmit() {
     setError(null);
-    const cleaned = items.filter((it) => it.itemName.trim().length > 0);
-    if (!schoolId || name.trim().length < 3 || cleaned.length === 0) {
-      setError("Isi nama template (min. 3 karakter) dan minimal satu item.");
+    if ((schools && schools.length > 0 && !schoolId) || name.trim().length < 3) {
+      setError("Isi nama template (min. 3 karakter).");
       return;
     }
 
+    const items: NewTemplateItem[] = [
+      ...FIXED_JOURNAL_ITEMS.map((f, i) => ({
+        itemName: f.name,
+        itemType: "checklist" as const,
+        description: f.description,
+        requiresPhoto: fixedRows[i].requiresPhoto,
+      })),
+      ...extraItems
+        .filter((it) => it.itemName.trim().length > 0)
+        .map((it) => ({
+          itemName: it.itemName.trim(),
+          itemType: it.itemType,
+          description: it.description?.trim() || undefined,
+          requiresPhoto: it.requiresPhoto,
+        })),
+    ];
+
     startTransition(async () => {
       try {
-        await createJournalTemplate({
-          schoolId,
+        await onCreate({
+          ...(schoolId ? { schoolId } : {}),
           name: name.trim(),
-          items: cleaned.map((it) => ({ itemName: it.itemName.trim(), itemType: it.itemType })),
+          items,
         });
       } catch (err) {
         // redirect() di server action dilempar sebagai error khusus Next;
@@ -68,16 +111,18 @@ export function JournalTemplateCreateForm({ schools }: { schools: School[] }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <label className="mb-1 block text-sm font-medium">Sekolah</label>
-        <select value={schoolId} onChange={(e) => setSchoolId(e.target.value)} className={inputClass}>
-          {schools.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      {schools && schools.length > 0 && (
+        <div>
+          <label className="mb-1 block text-sm font-medium">Sekolah</label>
+          <select value={schoolId} onChange={(e) => setSchoolId(e.target.value)} className={inputClass}>
+            {schools.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div>
         <label className="mb-1 block text-sm font-medium">Nama Template</label>
@@ -91,22 +136,56 @@ export function JournalTemplateCreateForm({ schools }: { schools: School[] }) {
       </div>
 
       <div>
-        <p className="mb-1 text-sm font-medium">Item Jurnal</p>
+        <p className="mb-1 text-sm font-medium">7 Kebiasaan Anak Indonesia Hebat (tetap)</p>
+        <p className="mb-2 text-xs text-slate-500">
+          Ketujuh kebiasaan ini wajib ada di setiap template dan tidak bisa dihapus. Centang
+          &quot;Wajib foto&quot; untuk item yang butuh bukti foto setiap hari (Bukti Harian per
+          tanggal tetap diutamakan).
+        </p>
+        <ul className="flex flex-col divide-y divide-slate-100 rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-700">
+          {FIXED_JOURNAL_ITEMS.map((item, i) => (
+            <li key={item.name} className="flex items-start justify-between gap-3 p-3">
+              <div>
+                <p className="text-sm font-medium">{item.name}</p>
+                <p className="text-xs text-slate-500">{item.description}</p>
+              </div>
+              <label className="flex shrink-0 items-center gap-2 text-xs">
+                <input
+                  type="checkbox"
+                  checked={fixedRows[i].requiresPhoto}
+                  onChange={() => toggleFixedPhoto(i)}
+                  className="rounded"
+                />
+                Wajib foto
+              </label>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <p className="mb-1 text-sm font-medium">Item Tambahan (opsional)</p>
         <div className="flex flex-col gap-2">
-          {items.map((item, i) => (
-            <div key={i} className="flex items-center gap-2">
+          {extraItems.map((item, i) => (
+            <div key={i} className="flex flex-wrap items-center gap-2">
               <input
                 value={item.itemName}
-                onChange={(e) => updateItem(i, { itemName: e.target.value })}
-                placeholder={`Item ${i + 1}, contoh: Sholat Subuh`}
-                className={inputClass}
+                onChange={(e) => updateExtra(i, { itemName: e.target.value })}
+                placeholder="Nama item, contoh: Membaca 15 menit"
+                className={`${inputClass} min-w-40 flex-1`}
+              />
+              <input
+                value={item.description ?? ""}
+                onChange={(e) => updateExtra(i, { description: e.target.value })}
+                placeholder="Keterangan contoh (opsional)"
+                className={`${inputClass} min-w-40 flex-1`}
               />
               <select
                 value={item.itemType}
                 onChange={(e) =>
-                  updateItem(i, { itemType: e.target.value as NewTemplateItem["itemType"] })
+                  updateExtra(i, { itemType: e.target.value as NewTemplateItem["itemType"] })
                 }
-                className={`${inputClass} w-56 shrink-0`}
+                className={`${inputClass} w-52 shrink-0`}
               >
                 {ITEM_TYPES.map((t) => (
                   <option key={t.value} value={t.value}>
@@ -114,12 +193,20 @@ export function JournalTemplateCreateForm({ schools }: { schools: School[] }) {
                   </option>
                 ))}
               </select>
+              <label className="flex shrink-0 items-center gap-1 text-xs">
+                <input
+                  type="checkbox"
+                  checked={item.requiresPhoto}
+                  onChange={() => updateExtra(i, { requiresPhoto: !item.requiresPhoto })}
+                  className="rounded"
+                />
+                Wajib foto
+              </label>
               <button
                 type="button"
-                onClick={() => removeRow(i)}
-                disabled={items.length === 1}
-                className="shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-40 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                aria-label={`Hapus item ${i + 1}`}
+                onClick={() => removeExtraRow(i)}
+                className="shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+                aria-label={`Hapus item tambahan ${i + 1}`}
               >
                 Hapus
               </button>
@@ -128,7 +215,7 @@ export function JournalTemplateCreateForm({ schools }: { schools: School[] }) {
         </div>
         <button
           type="button"
-          onClick={addRow}
+          onClick={addExtraRow}
           className="mt-2 w-fit rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
         >
           + Tambah Item

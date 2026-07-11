@@ -2,7 +2,8 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { eq, and, asc, sql } from "drizzle-orm";
-import { PERMISSIONS } from "@sjk/shared";
+import { PERMISSIONS, FIXED_JOURNAL_ITEM_NAMES } from "@sjk/shared";
+import type { AppJwtPayload } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
 import { journalTemplates, journalTemplateItems, auditLogs } from "../db/schema";
@@ -11,30 +12,69 @@ import type { Env, Variables } from "../index";
 export const journalTemplatesRoute = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 /**
- * Modul Admin untuk template jurnal harian (Fase 5).
+ * Modul template jurnal harian (Fase 5, revisi Juli 2026).
  * Pola mengikuti schools.ts (CRUD dasar), semesters.ts (activate:
  * nonaktifkan yang lama lalu aktifkan yang baru - dua statement berurutan,
  * Neon HTTP driver tidak mendukung transaksi interaktif), dan teachers.ts
  * (kompensasi manual saat insert bertingkat gagal di langkah kedua).
+ *
+ * REVISI JULI 2026:
+ * - Tidak lagi khusus Admin: Guru Wali juga punya JOURNAL_TEMPLATE_MANAGE,
+ *   tapi HANYA untuk sekolahnya sendiri. Scope diturunkan dari schoolId di
+ *   JWT (lihat scopedSchoolId) - Admin (schoolId null di JWT) tetap lintas
+ *   sekolah.
+ * - Setiap template WAJIB memuat 7 item tetap (FIXED_JOURNAL_ITEMS di
+ *   packages/shared) - divalidasi saat create; item tetap tidak boleh
+ *   dihapus dari template.
+ * - Item punya `description` (keterangan contoh untuk siswa) dan
+ *   `requiresPhoto` (default butuh bukti foto; Bukti Harian per-tanggal
+ *   tetap menang - lihat routes/journals.ts).
  */
 
 // Kolom item_type di DB adalah varchar bebas; zod-lah yang membatasi
 // nilai valid agar frontend cukup menangani 4 tipe ini.
 const itemTypeSchema = z.enum(["checklist", "waktu", "catatan", "foto"]);
 
-const createTemplateSchema = z.object({
-  schoolId: z.string().uuid(),
-  name: z.string().min(3).max(255),
-  items: z
-    .array(
-      z.object({
-        itemName: z.string().min(1).max(255),
-        itemType: itemTypeSchema,
-      })
-    )
-    .min(1)
-    .max(100),
+const itemSchema = z.object({
+  itemName: z.string().min(1).max(255),
+  itemType: itemTypeSchema,
+  description: z.string().max(500).optional(),
+  requiresPhoto: z.boolean().default(false),
 });
+
+const createTemplateSchema = z
+  .object({
+    // Opsional untuk Guru Wali (dipaksa ke sekolahnya sendiri); wajib
+    // secara efektif untuk Admin (divalidasi manual di handler).
+    schoolId: z.string().uuid().optional(),
+    name: z.string().min(3).max(255),
+    items: z.array(itemSchema).min(1).max(100),
+  })
+  .superRefine((val, ctx) => {
+    const names = new Set(val.items.map((i) => i.itemName.trim()));
+    const missing = FIXED_JOURNAL_ITEM_NAMES.filter((n) => !names.has(n));
+    if (missing.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Template wajib memuat 7 item tetap. Kurang: ${missing.join(", ")}`,
+        path: ["items"],
+      });
+    }
+  });
+
+/**
+ * schoolId efektif untuk user ini: Admin (schoolId JWT null) bebas lintas
+ * sekolah -> null; role lain dikunci ke sekolahnya sendiri.
+ */
+function scopedSchoolId(user: AppJwtPayload): string | null {
+  return user.role === "admin" ? null : user.schoolId;
+}
+
+const notFoundTemplate = {
+  error: "not_found",
+  message: "Template jurnal tidak ditemukan",
+  statusCode: 404,
+} as const;
 
 /**
  * Deteksi pelanggaran FK RESTRICT dari Postgres (code 23503), misalnya
@@ -55,7 +95,9 @@ journalTemplatesRoute.get(
   requirePermission(PERMISSIONS.JOURNAL_TEMPLATE_MANAGE),
   async (c) => {
     const db = c.get("db");
-    const schoolId = c.req.query("schoolId");
+    const user = c.get("user");
+    // Non-admin: paksa filter ke sekolah sendiri, abaikan query schoolId.
+    const schoolId = scopedSchoolId(user) ?? c.req.query("schoolId");
 
     const result = schoolId
       ? await db.select().from(journalTemplates).where(eq(journalTemplates.schoolId, schoolId))
@@ -75,9 +117,18 @@ journalTemplatesRoute.post(
     const user = c.get("user");
     const body = c.req.valid("json");
 
+    // Guru Wali: schoolId SELALU sekolahnya sendiri; Admin wajib mengisi.
+    const schoolId = scopedSchoolId(user) ?? body.schoolId;
+    if (!schoolId) {
+      return c.json(
+        { error: "bad_request", message: "schoolId wajib diisi", statusCode: 400 },
+        400
+      );
+    }
+
     const [template] = await db
       .insert(journalTemplates)
-      .values({ schoolId: body.schoolId, name: body.name, isActive: false })
+      .values({ schoolId, name: body.name, isActive: false })
       .returning();
 
     try {
@@ -86,6 +137,8 @@ journalTemplatesRoute.post(
           journalTemplateId: template.id,
           itemName: body.items[i].itemName,
           itemType: body.items[i].itemType,
+          description: body.items[i].description,
+          requiresPhoto: body.items[i].requiresPhoto,
           orderIndex: i,
         });
       }
@@ -115,15 +168,13 @@ journalTemplatesRoute.get(
   requirePermission(PERMISSIONS.JOURNAL_TEMPLATE_MANAGE),
   async (c) => {
     const db = c.get("db");
+    const user = c.get("user");
     const id = c.req.param("id");
 
     const [template] = await db.select().from(journalTemplates).where(eq(journalTemplates.id, id));
-    if (!template) {
-      return c.json(
-        { error: "not_found", message: "Template jurnal tidak ditemukan", statusCode: 404 },
-        404
-      );
-    }
+    if (!template) return c.json(notFoundTemplate, 404);
+    const scope = scopedSchoolId(user);
+    if (scope && template.schoolId !== scope) return c.json(notFoundTemplate, 404);
 
     const items = await db
       .select()
@@ -149,12 +200,9 @@ journalTemplatesRoute.patch(
     const { name } = c.req.valid("json");
 
     const [existing] = await db.select().from(journalTemplates).where(eq(journalTemplates.id, id));
-    if (!existing) {
-      return c.json(
-        { error: "not_found", message: "Template jurnal tidak ditemukan", statusCode: 404 },
-        404
-      );
-    }
+    if (!existing) return c.json(notFoundTemplate, 404);
+    const scope = scopedSchoolId(user);
+    if (scope && existing.schoolId !== scope) return c.json(notFoundTemplate, 404);
 
     const [updated] = await db
       .update(journalTemplates)
@@ -188,12 +236,9 @@ journalTemplatesRoute.patch(
     const id = c.req.param("id");
 
     const [target] = await db.select().from(journalTemplates).where(eq(journalTemplates.id, id));
-    if (!target) {
-      return c.json(
-        { error: "not_found", message: "Template jurnal tidak ditemukan", statusCode: 404 },
-        404
-      );
-    }
+    if (!target) return c.json(notFoundTemplate, 404);
+    const scope = scopedSchoolId(user);
+    if (scope && target.schoolId !== scope) return c.json(notFoundTemplate, 404);
 
     await db
       .update(journalTemplates)
@@ -222,16 +267,11 @@ journalTemplatesRoute.patch(
   }
 );
 
-const addItemSchema = z.object({
-  itemName: z.string().min(1).max(255),
-  itemType: itemTypeSchema,
-});
-
 journalTemplatesRoute.post(
   "/:id/items",
   authMiddleware,
   requirePermission(PERMISSIONS.JOURNAL_TEMPLATE_MANAGE),
-  zValidator("json", addItemSchema),
+  zValidator("json", itemSchema),
   async (c) => {
     const db = c.get("db");
     const user = c.get("user");
@@ -239,12 +279,9 @@ journalTemplatesRoute.post(
     const body = c.req.valid("json");
 
     const [template] = await db.select().from(journalTemplates).where(eq(journalTemplates.id, id));
-    if (!template) {
-      return c.json(
-        { error: "not_found", message: "Template jurnal tidak ditemukan", statusCode: 404 },
-        404
-      );
-    }
+    if (!template) return c.json(notFoundTemplate, 404);
+    const scope = scopedSchoolId(user);
+    if (scope && template.schoolId !== scope) return c.json(notFoundTemplate, 404);
 
     const [{ maxOrder }] = await db
       .select({ maxOrder: sql<number | null>`max(${journalTemplateItems.orderIndex})` })
@@ -257,6 +294,8 @@ journalTemplatesRoute.post(
         journalTemplateId: id,
         itemName: body.itemName,
         itemType: body.itemType,
+        description: body.description,
+        requiresPhoto: body.requiresPhoto,
         orderIndex: (maxOrder ?? -1) + 1,
       })
       .returning();
@@ -274,15 +313,37 @@ journalTemplatesRoute.post(
   }
 );
 
-journalTemplatesRoute.delete(
+const updateItemSchema = z
+  .object({
+    description: z.string().max(500).nullish(),
+    requiresPhoto: z.boolean().optional(),
+  })
+  .refine((v) => v.description !== undefined || v.requiresPhoto !== undefined, {
+    message: "Minimal satu field harus diisi",
+  });
+
+/**
+ * PATCH /:id/items/:itemId - ubah keterangan contoh dan/atau penanda
+ * butuh bukti foto. Nama & tipe item sengaja TIDAK bisa diubah di sini:
+ * item tetap (7 kebiasaan) tidak boleh berganti nama, dan mengganti nama
+ * item lain yang sudah dipakai jurnal siswa akan mengubah makna data lama.
+ */
+journalTemplatesRoute.patch(
   "/:id/items/:itemId",
   authMiddleware,
   requirePermission(PERMISSIONS.JOURNAL_TEMPLATE_MANAGE),
+  zValidator("json", updateItemSchema),
   async (c) => {
     const db = c.get("db");
     const user = c.get("user");
     const id = c.req.param("id");
     const itemId = c.req.param("itemId");
+    const body = c.req.valid("json");
+
+    const [template] = await db.select().from(journalTemplates).where(eq(journalTemplates.id, id));
+    if (!template) return c.json(notFoundTemplate, 404);
+    const scope = scopedSchoolId(user);
+    if (scope && template.schoolId !== scope) return c.json(notFoundTemplate, 404);
 
     const [existing] = await db
       .select()
@@ -294,6 +355,69 @@ journalTemplatesRoute.delete(
       return c.json(
         { error: "not_found", message: "Item template tidak ditemukan", statusCode: 404 },
         404
+      );
+    }
+
+    const [updated] = await db
+      .update(journalTemplateItems)
+      .set({
+        ...(body.description !== undefined ? { description: body.description } : {}),
+        ...(body.requiresPhoto !== undefined ? { requiresPhoto: body.requiresPhoto } : {}),
+      })
+      .where(eq(journalTemplateItems.id, itemId))
+      .returning();
+
+    await db.insert(auditLogs).values({
+      userId: user.sub,
+      action: "update",
+      tableName: "journal_template_items",
+      recordId: itemId,
+      oldValue: existing,
+      newValue: updated,
+      ipAddress: c.req.header("cf-connecting-ip") ?? null,
+    });
+
+    return c.json({ data: updated });
+  }
+);
+
+journalTemplatesRoute.delete(
+  "/:id/items/:itemId",
+  authMiddleware,
+  requirePermission(PERMISSIONS.JOURNAL_TEMPLATE_MANAGE),
+  async (c) => {
+    const db = c.get("db");
+    const user = c.get("user");
+    const id = c.req.param("id");
+    const itemId = c.req.param("itemId");
+
+    const [template] = await db.select().from(journalTemplates).where(eq(journalTemplates.id, id));
+    if (!template) return c.json(notFoundTemplate, 404);
+    const scope = scopedSchoolId(user);
+    if (scope && template.schoolId !== scope) return c.json(notFoundTemplate, 404);
+
+    const [existing] = await db
+      .select()
+      .from(journalTemplateItems)
+      .where(
+        and(eq(journalTemplateItems.id, itemId), eq(journalTemplateItems.journalTemplateId, id))
+      );
+    if (!existing) {
+      return c.json(
+        { error: "not_found", message: "Item template tidak ditemukan", statusCode: 404 },
+        404
+      );
+    }
+
+    // 7 item tetap tidak boleh dihapus (revisi Juli 2026).
+    if (FIXED_JOURNAL_ITEM_NAMES.includes(existing.itemName)) {
+      return c.json(
+        {
+          error: "conflict",
+          message: `"${existing.itemName}" adalah salah satu dari 7 kebiasaan tetap dan tidak bisa dihapus dari template.`,
+          statusCode: 409,
+        },
+        409
       );
     }
 
@@ -337,12 +461,9 @@ journalTemplatesRoute.delete(
     const id = c.req.param("id");
 
     const [existing] = await db.select().from(journalTemplates).where(eq(journalTemplates.id, id));
-    if (!existing) {
-      return c.json(
-        { error: "not_found", message: "Template jurnal tidak ditemukan", statusCode: 404 },
-        404
-      );
-    }
+    if (!existing) return c.json(notFoundTemplate, 404);
+    const scope = scopedSchoolId(user);
+    if (scope && existing.schoolId !== scope) return c.json(notFoundTemplate, 404);
 
     try {
       await db.delete(journalTemplates).where(eq(journalTemplates.id, id));

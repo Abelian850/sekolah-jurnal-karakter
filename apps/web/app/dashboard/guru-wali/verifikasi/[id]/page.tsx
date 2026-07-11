@@ -46,7 +46,11 @@ export default async function VerifikasiJurnalPage({
     student: StudentInfo;
     items: JournalItemData[];
     verification: Verification | null;
-    evidenceRequirement: { templateItemId: string; itemName: string } | null;
+    evidenceRequirements: Array<{
+      templateItemId: string;
+      itemName: string;
+      source: "harian" | "template";
+    }>;
     comments: CommentData[];
   };
   try {
@@ -56,7 +60,7 @@ export default async function VerifikasiJurnalPage({
     throw err;
   }
 
-  const { journal, student, items, verification, evidenceRequirement, comments } = data;
+  const { journal, student, items, verification, evidenceRequirements, comments } = data;
 
   return (
     <div className="glass-panel rounded-2xl p-6">
@@ -83,9 +87,12 @@ export default async function VerifikasiJurnalPage({
         </div>
       )}
 
-      {evidenceRequirement && (
+      {evidenceRequirements.length > 0 && (
         <p className="mb-2 inline-block rounded-full bg-brand-50 px-3 py-1 text-xs text-brand-600 dark:bg-brand-900/40 dark:text-brand-500">
-          Kebiasaan wajib berbukti tanggal ini: {evidenceRequirement.itemName}
+          {evidenceRequirements[0].source === "harian"
+            ? "Kebiasaan wajib berbukti tanggal ini (Bukti Harian): "
+            : "Kebiasaan wajib berbukti (default template): "}
+          {evidenceRequirements.map((r) => r.itemName).join(", ")}
         </p>
       )}
 

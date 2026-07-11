@@ -9,6 +9,8 @@ export interface JournalItemData {
   itemName: string;
   itemType: string;
   orderIndex: number;
+  description?: string | null;
+  requiresPhoto?: boolean;
 }
 
 const STATUS_BADGE: Record<JournalItemData["status"], { label: string; className: string }> = {

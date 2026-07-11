@@ -1,5 +1,6 @@
 import { apiFetch } from "@/lib/api-client";
 import { JournalTemplateCreateForm } from "@/components/journal-template-create-form";
+import { createJournalTemplate } from "@/lib/template-actions";
 
 interface School {
   id: string;
@@ -8,6 +9,7 @@ interface School {
 
 export default async function JurnalTemplateBaruPage() {
   const schools = await apiFetch<School[]>("/schools");
+  const onCreate = createJournalTemplate.bind(null, "/dashboard/admin/jurnal-template");
 
   return (
     <div className="glass-panel max-w-2xl rounded-2xl p-6">
@@ -18,7 +20,7 @@ export default async function JurnalTemplateBaruPage() {
           Belum ada sekolah. Tambahkan sekolah terlebih dahulu di menu Sekolah.
         </p>
       ) : (
-        <JournalTemplateCreateForm schools={schools} />
+        <JournalTemplateCreateForm schools={schools} onCreate={onCreate} />
       )}
     </div>
   );

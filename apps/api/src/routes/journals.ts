@@ -109,6 +109,8 @@ async function listJournalItems(db: Database, journalId: string) {
       itemName: journalTemplateItems.itemName,
       itemType: journalTemplateItems.itemType,
       orderIndex: journalTemplateItems.orderIndex,
+      description: journalTemplateItems.description,
+      requiresPhoto: journalTemplateItems.requiresPhoto,
     })
     .from(journalItems)
     .innerJoin(journalTemplateItems, eq(journalItems.templateItemId, journalTemplateItems.id))
@@ -130,13 +132,30 @@ async function findVerification(db: Database, journalId: string) {
 }
 
 /**
- * Kebiasaan wajib berbukti foto yang ditetapkan Guru Wali AKTIF siswa untuk
- * satu tanggal (requirement 7 Kebiasaan Anak Indonesia Hebat), atau null
- * jika guru belum menetapkan / siswa belum punya Guru Wali aktif.
- * Diturunkan dari teacher_student (isActive) - bukan dari klien.
+ * Daftar kebiasaan wajib berbukti foto untuk satu jurnal (revisi Juli 2026).
+ * Prioritas (keputusan desain):
+ * 1. Bukti Harian yang ditetapkan Guru Wali AKTIF siswa untuk tanggal itu
+ *    (evidence_requirements) - jika ada, HANYA itu yang berlaku (menang
+ *    atas default template). Diturunkan dari teacher_student (isActive),
+ *    bukan dari klien.
+ * 2. Jika guru tidak menetapkan Bukti Harian: item template yang ditandai
+ *    `requiresPhoto` berlaku sebagai DEFAULT (bisa lebih dari satu).
+ * Hasil [] berarti tidak ada kewajiban spesifik - validasi submit kembali
+ * ke aturan lama "minimal satu foto pada kebiasaan mana pun".
  */
-async function findEvidenceRequirement(db: Database, studentId: string, journalDate: string) {
-  const [row] = await db
+export interface RequiredPhotoItem {
+  templateItemId: string;
+  itemName: string;
+  source: "harian" | "template";
+}
+
+async function findEvidenceRequirements(
+  db: Database,
+  studentId: string,
+  journalDate: string,
+  journalTemplateId: string
+): Promise<RequiredPhotoItem[]> {
+  const [daily] = await db
     .select({
       templateItemId: evidenceRequirements.templateItemId,
       itemName: journalTemplateItems.itemName,
@@ -155,7 +174,24 @@ async function findEvidenceRequirement(db: Database, studentId: string, journalD
       eq(evidenceRequirements.templateItemId, journalTemplateItems.id)
     )
     .where(eq(evidenceRequirements.requirementDate, journalDate));
-  return row ?? null;
+
+  if (daily) return [{ ...daily, source: "harian" }];
+
+  const defaults = await db
+    .select({
+      templateItemId: journalTemplateItems.id,
+      itemName: journalTemplateItems.itemName,
+    })
+    .from(journalTemplateItems)
+    .where(
+      and(
+        eq(journalTemplateItems.journalTemplateId, journalTemplateId),
+        eq(journalTemplateItems.requiresPhoto, true)
+      )
+    )
+    .orderBy(asc(journalTemplateItems.orderIndex));
+
+  return defaults.map((d) => ({ ...d, source: "template" as const }));
 }
 
 const notFoundStudent = {
@@ -200,8 +236,13 @@ journalsRoute.get(
 
     const items = await listJournalItems(db, journal.id);
     const verification = await findVerification(db, journal.id);
-    const evidenceRequirement = await findEvidenceRequirement(db, student.id, journal.journalDate);
-    return c.json({ data: { journal, items, verification, evidenceRequirement } });
+    const requiredPhotoItems = await findEvidenceRequirements(
+      db,
+      student.id,
+      journal.journalDate,
+      journal.journalTemplateId
+    );
+    return c.json({ data: { journal, items, verification, evidenceRequirements: requiredPhotoItems } });
   }
 );
 
@@ -232,8 +273,15 @@ journalsRoute.post(
     if (existing) {
       const items = await listJournalItems(db, existing.id);
       const verification = await findVerification(db, existing.id);
-      const evidenceRequirement = await findEvidenceRequirement(db, student.id, journalDate);
-      return c.json({ data: { journal: existing, items, verification, evidenceRequirement } });
+      const requiredPhotoItems = await findEvidenceRequirements(
+        db,
+        student.id,
+        journalDate,
+        existing.journalTemplateId
+      );
+      return c.json({
+        data: { journal: existing, items, verification, evidenceRequirements: requiredPhotoItems },
+      });
     }
 
     const resolved = await resolveActiveSemesterAndTemplate(db, student.schoolId);
@@ -285,8 +333,16 @@ journalsRoute.post(
     }
 
     const items = await listJournalItems(db, journal.id);
-    const evidenceRequirement = await findEvidenceRequirement(db, student.id, journalDate);
-    return c.json({ data: { journal, items, verification: null, evidenceRequirement } }, 201);
+    const requiredPhotoItems = await findEvidenceRequirements(
+      db,
+      student.id,
+      journalDate,
+      journal.journalTemplateId
+    );
+    return c.json(
+      { data: { journal, items, verification: null, evidenceRequirements: requiredPhotoItems } },
+      201
+    );
   }
 );
 
@@ -457,15 +513,22 @@ journalsRoute.get(
 
     const items = await listJournalItems(db, journal.id);
     const verification = await findVerification(db, journal.id);
-    const evidenceRequirement = await findEvidenceRequirement(
+    const requiredPhotoItems = await findEvidenceRequirements(
       db,
       journal.studentId,
-      journal.journalDate
+      journal.journalDate,
+      journal.journalTemplateId
     );
     // Komentar orang tua (Fase 7) ikut ditampilkan ke siswa pemilik jurnal.
     const commentList = await listComments(db, journal.id);
     return c.json({
-      data: { journal, items, verification, evidenceRequirement, comments: commentList },
+      data: {
+        journal,
+        items,
+        verification,
+        evidenceRequirements: requiredPhotoItems,
+        comments: commentList,
+      },
     });
   }
 );
@@ -582,30 +645,43 @@ journalsRoute.patch(
       );
     }
 
-    // Aturan 2: WAJIB ada minimal SATU foto bukti.
-    // - Jika Guru Wali menetapkan kebiasaan wajib berbukti untuk tanggal ini,
-    //   foto harus dilampirkan pada kebiasaan TERSEBUT - kecuali item itu
-    //   berstatus "belum" (tidak dilakukan, sudah berketerangan), karena
-    //   memotret kebiasaan yang tidak dilakukan mustahil; saat itu berlaku
-    //   fallback foto pada kebiasaan mana pun.
-    // - Jika guru belum menetapkan: foto boleh pada kebiasaan mana pun.
-    const requirement = await findEvidenceRequirement(db, journal.studentId, journal.journalDate);
-    const requiredItem = requirement
-      ? items.find((i) => i.templateItemId === requirement.templateItemId)
-      : undefined;
+    // Aturan 2: WAJIB ada minimal SATU foto bukti (revisi Juli 2026).
+    // - Daftar kebiasaan wajib berbukti datang dari findEvidenceRequirements:
+    //   Bukti Harian guru wali (menang) ATAU default requiresPhoto template.
+    // - Setiap kebiasaan wajib yang DIKERJAKAN (status bukan "belum") harus
+    //   berfoto. Item wajib berstatus "belum" (tidak dilakukan, sudah
+    //   berketerangan) dikecualikan - memotret kebiasaan yang tidak
+    //   dilakukan mustahil.
+    // - Jika tidak ada satu pun kebiasaan wajib yang efektif: fallback lama,
+    //   foto minimal satu pada kebiasaan mana pun.
+    const requirements = await findEvidenceRequirements(
+      db,
+      journal.studentId,
+      journal.journalDate,
+      journal.journalTemplateId
+    );
+    const requiredItems = items.filter(
+      (i) =>
+        requirements.some((r) => r.templateItemId === i.templateItemId) && i.status !== "belum"
+    );
 
-    if (requiredItem && requiredItem.status !== "belum") {
-      if ((requiredItem.photoUrl ?? "").trim() === "") {
-        return c.json(
-          {
-            error: "missing_required_photo",
-            message: `Guru Wali mewajibkan foto bukti pada kebiasaan "${requiredItem.itemName}" hari ini. Lampirkan fotonya sebelum mengirim.`,
-            statusCode: 422,
-          },
-          422
-        );
-      }
-    } else if (!items.some((i) => (i.photoUrl ?? "").trim() !== "")) {
+    const missingPhoto = requiredItems.filter((i) => (i.photoUrl ?? "").trim() === "");
+    if (missingPhoto.length > 0) {
+      const source = requirements[0]?.source === "harian" ? "Guru Wali" : "Template jurnal";
+      return c.json(
+        {
+          error: "missing_required_photo",
+          message:
+            `${source} mewajibkan foto bukti pada kebiasaan: ` +
+            missingPhoto.map((i) => `"${i.itemName}"`).join(", ") +
+            ". Lampirkan fotonya sebelum mengirim.",
+          statusCode: 422,
+        },
+        422
+      );
+    }
+
+    if (requiredItems.length === 0 && !items.some((i) => (i.photoUrl ?? "").trim() !== "")) {
       return c.json(
         {
           error: "missing_photo",

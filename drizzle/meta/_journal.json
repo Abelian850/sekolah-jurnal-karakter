@@ -43,6 +43,13 @@
       "when": 1783738792549,
       "tag": "0005_tiny_captain_midlands",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1783739199211,
+      "tag": "0006_lively_lifeguard",
+      "breakpoints": true
     }
   ]
 }

@@ -39,7 +39,7 @@ export default async function JurnalHariIniPage({
     journal: Journal;
     items: JournalItemData[];
     verification: Verification | null;
-    evidenceRequirement: EvidenceRequirementInfo | null;
+    evidenceRequirements: EvidenceRequirementInfo[];
   } | null = null;
   let profileMissing = false;
   try {
@@ -47,7 +47,7 @@ export default async function JurnalHariIniPage({
       journal: Journal;
       items: JournalItemData[];
       verification: Verification | null;
-      evidenceRequirement: EvidenceRequirementInfo | null;
+      evidenceRequirements: EvidenceRequirementInfo[];
     } | null>(`/journals/today?date=${today}`);
   } catch (err) {
     if (err instanceof ApiRequestError && err.statusCode === 404) {
@@ -99,7 +99,7 @@ export default async function JurnalHariIniPage({
           <JournalItemsForm
             journalId={data.journal.id}
             items={data.items}
-            evidenceRequirement={data.evidenceRequirement}
+            evidenceRequirements={data.evidenceRequirements}
           />
         </div>
       ) : (

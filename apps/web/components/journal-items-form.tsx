@@ -20,6 +20,8 @@ const STATUS_OPTIONS = [
 export interface EvidenceRequirementInfo {
   templateItemId: string;
   itemName: string;
+  /** "harian" = ditetapkan Guru Wali untuk tanggal ini; "template" = default template. */
+  source: "harian" | "template";
 }
 
 /** Nilai TERSIMPAN satu item - dipakai untuk validasi sebelum kirim. */
@@ -38,9 +40,10 @@ interface SavedItemValues {
  * Aturan 7 Kebiasaan Anak Indonesia Hebat (harus sama dengan validasi
  * server di apps/api/src/routes/journals.ts endpoint submit):
  * 1. Semua item wajib terisi - status "belum" hanya boleh jika ada keterangan.
- * 2. Wajib minimal satu foto bukti; jika Guru Wali menetapkan kebiasaan
- *    wajib berbukti hari ini, foto harus pada kebiasaan tersebut (kecuali
- *    kebiasaan itu berstatus "belum" berketerangan - fallback foto bebas).
+ * 2. Wajib minimal satu foto bukti; kebiasaan wajib berbukti datang dari
+ *    Bukti Harian Guru Wali (menang) atau default template (requiresPhoto),
+ *    dan setiap yang dikerjakan harus berfoto (status "belum" berketerangan
+ *    dikecualikan; tanpa kebiasaan wajib berlaku fallback foto bebas).
  * Validasi di sini hanya untuk pesan yang ramah; server tetap sumber
  * kebenaran dan memvalidasi ulang.
  */
@@ -111,6 +114,7 @@ function ItemRow({
           </span>
         )}
       </div>
+      {item.description && <p className="text-xs text-slate-500">{item.description}</p>}
 
       <div className="flex flex-wrap items-center gap-2">
         {(item.itemType === "checklist" || item.itemType === "waktu") && (
@@ -188,11 +192,11 @@ function ItemRow({
 export function JournalItemsForm({
   journalId,
   items,
-  evidenceRequirement,
+  evidenceRequirements,
 }: {
   journalId: string;
   items: JournalItemData[];
-  evidenceRequirement: EvidenceRequirementInfo | null;
+  evidenceRequirements: EvidenceRequirementInfo[];
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -227,16 +231,26 @@ export function JournalItemsForm({
       );
     }
 
-    const requiredItem = evidenceRequirement
-      ? items.find((i) => i.templateItemId === evidenceRequirement.templateItemId)
-      : undefined;
-    const requiredValues = requiredItem ? savedValues[requiredItem.id] : undefined;
+    const requiredIds = new Set(evidenceRequirements.map((r) => r.templateItemId));
+    const requiredItems = items.filter((i) => {
+      const v = savedValues[i.id];
+      return requiredIds.has(i.templateItemId) && v && v.status !== "belum";
+    });
 
-    if (requiredItem && requiredValues && requiredValues.status !== "belum") {
-      if (requiredValues.photoUrl === "") {
-        return `Guru Wali mewajibkan foto bukti pada kebiasaan "${requiredItem.itemName}" hari ini. Lampirkan fotonya (dan klik Simpan) sebelum mengirim.`;
-      }
-    } else if (!items.some((i) => (savedValues[i.id]?.photoUrl ?? "") !== "")) {
+    const missingPhoto = requiredItems.filter((i) => (savedValues[i.id]?.photoUrl ?? "") === "");
+    if (missingPhoto.length > 0) {
+      const source = evidenceRequirements[0]?.source === "harian" ? "Guru Wali" : "Template jurnal";
+      return (
+        `${source} mewajibkan foto bukti pada kebiasaan: ` +
+        missingPhoto.map((i) => `"${i.itemName}"`).join(", ") +
+        ". Lampirkan fotonya (dan klik Simpan) sebelum mengirim."
+      );
+    }
+
+    if (
+      requiredItems.length === 0 &&
+      !items.some((i) => (savedValues[i.id]?.photoUrl ?? "") !== "")
+    ) {
       return "Lampirkan minimal satu foto bukti pada salah satu kebiasaan (dan klik Simpan) sebelum mengirim jurnal.";
     }
 
@@ -266,10 +280,15 @@ export function JournalItemsForm({
 
   return (
     <div>
-      {evidenceRequirement && (
+      {evidenceRequirements.length > 0 && (
         <div className="mb-2 rounded-lg bg-brand-50 p-3 text-sm text-brand-900 dark:bg-brand-900/20 dark:text-brand-500">
-          Hari ini Guru Wali mewajibkan foto bukti pada kebiasaan{" "}
-          <span className="font-medium">{evidenceRequirement.itemName}</span>.
+          {evidenceRequirements[0].source === "harian"
+            ? "Hari ini Guru Wali mewajibkan foto bukti pada kebiasaan "
+            : "Template jurnal mewajibkan foto bukti pada kebiasaan "}
+          <span className="font-medium">
+            {evidenceRequirements.map((r) => r.itemName).join(", ")}
+          </span>
+          .
         </div>
       )}
 
@@ -279,7 +298,9 @@ export function JournalItemsForm({
             key={item.id}
             journalId={journalId}
             item={item}
-            isEvidenceRequired={evidenceRequirement?.templateItemId === item.templateItemId}
+            isEvidenceRequired={evidenceRequirements.some(
+              (r) => r.templateItemId === item.templateItemId
+            )}
             onSaved={handleRowSaved}
           />
         ))}

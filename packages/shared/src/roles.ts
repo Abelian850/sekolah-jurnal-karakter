@@ -68,6 +68,10 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   [ROLES.GURU_WALI]: [
     PERMISSIONS.STUDENT_LIST_OWN,
     PERMISSIONS.JOURNAL_VERIFY,
+    // Revisi Juli 2026: Guru Wali ikut mengelola template jurnal sekolahnya
+    // sendiri (routes/journal-templates.ts membatasi scope ke schoolId JWT;
+    // hanya Admin yang lintas sekolah).
+    PERMISSIONS.JOURNAL_TEMPLATE_MANAGE,
   ],
   [ROLES.GURU]: [PERMISSIONS.STUDENT_LIST_OWN],
   [ROLES.ORANG_TUA]: [PERMISSIONS.JOURNAL_VIEW_CHILD, PERMISSIONS.COMMENT_CREATE],

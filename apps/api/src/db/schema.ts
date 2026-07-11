@@ -252,6 +252,13 @@ export const journalTemplateItems = pgTable("journal_template_items", {
   itemName: varchar("item_name", { length: 255 }).notNull(),
   itemType: varchar("item_type", { length: 20 }).notNull(), // checklist|waktu|catatan|foto
   orderIndex: integer("order_index").notNull().default(0),
+  // Keterangan contoh yang tampil ke siswa saat mengisi jurnal
+  // (revisi Juli 2026, wajib terisi untuk 7 item tetap).
+  description: text("description"),
+  // Penanda item butuh bukti foto sebagai DEFAULT. Bukti Harian
+  // (evidence_requirements, per tanggal oleh Guru Wali) tetap MENANG
+  // atas default ini - lihat findEvidenceRequirements di routes/journals.ts.
+  requiresPhoto: boolean("requires_photo").notNull().default(false),
 });
 
 export const journals = pgTable(

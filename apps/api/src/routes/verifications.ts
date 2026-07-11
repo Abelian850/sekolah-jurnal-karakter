@@ -366,11 +366,17 @@ verificationsRoute.get(
       .from(verifications)
       .where(eq(verifications.journalId, row.journal.id));
 
-    // Kebiasaan wajib berbukti yang guru INI tetapkan untuk tanggal jurnal
-    // tsb (bisa null) - ditampilkan di halaman periksa agar guru ingat apa
-    // yang ia wajibkan hari itu.
+    // Kebiasaan wajib berbukti untuk jurnal ini - ditampilkan di halaman
+    // periksa agar guru ingat apa yang diwajibkan hari itu. Prioritas sama
+    // dengan validasi submit di journals.ts (revisi Juli 2026): Bukti Harian
+    // yang guru INI tetapkan menang; jika tidak ada, default requiresPhoto
+    // dari template jurnal tsb.
     const teacher = await findOwnTeacher(db, user.sub);
-    let evidenceRequirement: { templateItemId: string; itemName: string } | null = null;
+    let requiredPhotoItems: Array<{
+      templateItemId: string;
+      itemName: string;
+      source: "harian" | "template";
+    }> = [];
     if (teacher) {
       const [req] = await db
         .select({
@@ -388,7 +394,22 @@ verificationsRoute.get(
             eq(evidenceRequirements.requirementDate, row.journal.journalDate)
           )
         );
-      evidenceRequirement = req ?? null;
+      if (req) requiredPhotoItems = [{ ...req, source: "harian" }];
+    }
+    if (requiredPhotoItems.length === 0) {
+      const defaults = await db
+        .select({
+          templateItemId: journalTemplateItems.id,
+          itemName: journalTemplateItems.itemName,
+        })
+        .from(journalTemplateItems)
+        .where(
+          and(
+            eq(journalTemplateItems.journalTemplateId, row.journal.journalTemplateId),
+            eq(journalTemplateItems.requiresPhoto, true)
+          )
+        );
+      requiredPhotoItems = defaults.map((d) => ({ ...d, source: "template" as const }));
     }
 
     // Komentar orang tua (Fase 7) tampil di halaman periksa guru wali.
@@ -400,7 +421,7 @@ verificationsRoute.get(
         student: row.student,
         items,
         verification: verification ?? null,
-        evidenceRequirement,
+        evidenceRequirements: requiredPhotoItems,
         comments: commentList,
       },
     });

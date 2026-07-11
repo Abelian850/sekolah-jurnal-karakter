@@ -22,6 +22,11 @@ const NAV_ITEMS = [
     label: "Bukti Harian",
     match: (p: string) => p.startsWith("/dashboard/guru-wali/bukti-harian"),
   },
+  {
+    href: "/dashboard/guru-wali/template",
+    label: "Template Jurnal",
+    match: (p: string) => p.startsWith("/dashboard/guru-wali/template"),
+  },
 ];
 
 export function GuruWaliNav() {
