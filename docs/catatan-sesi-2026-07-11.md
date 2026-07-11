@@ -1,5 +1,25 @@
 # Catatan Sesi — 11 Juli 2026
 
+## Sesi 2: Hapus Massal Peserta Didik berdasarkan NISN
+
+Permintaan user: upload file berisi NISN -> siswa terkait dihapus otomatis.
+(Rencana awal "per kelas" dibatalkan user; penghapusan berdasarkan NAMA
+sengaja tidak didukung — nama tidak unik, rawan salah hapus.)
+
+- `POST /students/bulk-delete` (routes/students.ts): terima `{ nisns: [] }`
+  maks 1000, proses per baris (pola /students/bulk), proteksi jurnal sama
+  dengan DELETE /:id, audit log per siswa terhapus.
+- UI: `/dashboard/admin/siswa/hapus-massal` + `bulk-delete-students.tsx`
+  (parse kolom `nisn` di browser — file hasil Export Excel bisa langsung
+  dipakai), preview + window.confirm, hasil per baris. Link "Hapus Massal"
+  di daftar siswa. Dok: bagian baru di docs/bulk-import-export.md.
+- Typecheck api & web LULUS (dijalankan dari salinan /tmp karena junction
+  Windows node_modules/@sjk tidak terbaca sandbox — masalah lingkungan,
+  bukan kode; masalah sinkron OneDrive->sandbox sesi 1 masih ada, salinan
+  mount page.tsx siswa & students.ts disamakan manual dari sisi sandbox).
+- Uji manual tersisa: upload file NISN campuran (valid/tak
+  terdaftar/punya jurnal/duplikat) dan cek laporan per baris + audit_logs.
+
 ## Selesai: 4 revisi yang direncanakan (lihat catatan 10 Juli sesi 2)
 
 **1. Impor guru dari Excel + template** (`c3fd95f`)

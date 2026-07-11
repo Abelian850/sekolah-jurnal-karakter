@@ -75,6 +75,27 @@ nip | fullName | email | phone | isGuruWali
 **Import Guru**: mengikuti pola yang sama (`POST /teachers/bulk` di backend sudah tersedia),
 komponen UI-nya dapat ditambahkan mengikuti pola `bulk-import-students.tsx` bila dibutuhkan.
 
+## Hapus Massal Peserta Didik (Juli 2026)
+
+**Halaman**: `/dashboard/admin/siswa/hapus-massal` — **Endpoint**: `POST /students/bulk-delete`
+
+Admin mengunggah file Excel berisi kolom `nisn` (kolom lain diabaikan, jadi
+file hasil "Export Excel" bisa langsung dipakai setelah baris siswa yang
+TIDAK ingin dihapus dibuang). Pola sama dengan impor: parsing di browser
+(`components/bulk-delete-students.tsx`), array NISN dikirim ke Server Action
+(`siswa/hapus-massal/actions.ts`), diproses per baris di backend.
+
+Keputusan desain:
+- **Hanya NISN, bukan nama** — nama tidak unik dan rawan salah ketik.
+- **Proteksi jurnal** — siswa yang sudah punya jurnal dilewati per baris
+  (proteksi yang sama dengan `DELETE /students/:id`), demi menjaga riwayat
+  pengisian dan nilai. Untuk siswa lulus, gunakan fitur Kelulusan
+  (nonaktifkan, jangan hapus), bukan fitur ini.
+- Menghapus baris `users` -> cascade ke `students` dan relasi turunannya;
+  satu baris `audit_logs` per siswa terhapus.
+- NISN duplikat dan nilai non-NISN disaring di browser sebelum dikirim;
+  konfirmasi `window.confirm` menyebut jumlah siswa yang akan dihapus.
+
 ## Menambah bulk import untuk entitas lain
 
 Ikuti pola yang sama persis:

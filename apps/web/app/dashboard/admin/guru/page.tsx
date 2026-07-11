@@ -2,6 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "@/lib/api-client";
 import { ResetTeacherPasswordButton } from "@/components/reset-teacher-password-button";
+import { DeleteTeacherButton } from "@/components/delete-teacher-button";
 
 interface Teacher {
   id: string;
@@ -84,6 +85,7 @@ export default async function GuruListPage() {
                       teacherName={t.fullName}
                       nip={t.nip}
                     />
+                    <DeleteTeacherButton teacherId={t.id} teacherName={t.fullName} />
                   </div>
                 </td>
               </tr>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { apiFetch } from "@/lib/api-client";
 import { ExportStudentsButton } from "@/components/export-students-button";
 import { ResetStudentPasswordButton } from "@/components/reset-student-password-button";
+import { DeleteStudentButton } from "@/components/delete-student-button";
 
 interface Student {
   id: string;
@@ -28,6 +29,12 @@ export default async function SiswaListPage() {
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
           >
             Impor Excel
+          </Link>
+          <Link
+            href="/dashboard/admin/siswa/hapus-massal"
+            className="rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-950"
+          >
+            Hapus Massal
           </Link>
           <Link
             href="/dashboard/admin/siswa/baru"
@@ -61,11 +68,14 @@ export default async function SiswaListPage() {
                 <td className="py-2">{s.className}</td>
                 <td className="py-2">{s.gradeLevel}</td>
                 <td className="py-2">
-                  <ResetStudentPasswordButton
-                    studentId={s.id}
-                    studentName={s.fullName}
-                    nisn={s.nisn}
-                  />
+                  <div className="flex items-center gap-3">
+                    <ResetStudentPasswordButton
+                      studentId={s.id}
+                      studentName={s.fullName}
+                      nisn={s.nisn}
+                    />
+                    <DeleteStudentButton studentId={s.id} studentName={s.fullName} />
+                  </div>
                 </td>
               </tr>
             ))}

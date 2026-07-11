@@ -1,9 +1,10 @@
 import Link from "next/link";
 
 /**
- * Landing page publik (Fase 8). Server component murni — tanpa dependensi
- * baru, tanpa JS klien; FAQ memakai <details> native. Styling konsisten
- * dengan dashboard: Tailwind + utility .glass-panel + warna brand.
+ * Landing page publik. Server component murni — tanpa dependensi baru,
+ * tanpa JS klien; FAQ memakai <details> native. Gaya: modern biru
+ * profesional (gradient hero halus, kartu berbayang, ikon berlatar warna),
+ * konsisten dengan warna brand + utility .glass-panel dashboard.
  */
 
 const ROLES = [
@@ -11,26 +12,31 @@ const ROLES = [
     title: "Peserta Didik",
     desc: "Mengisi jurnal 7 Kebiasaan setiap hari, melampirkan foto bukti, memantau status verifikasi dan nilai, serta menerima notifikasi komentar.",
     icon: "📝",
+    accent: "bg-blue-50 text-blue-600 ring-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:ring-blue-900",
   },
   {
     title: "Guru Wali",
     desc: "Membina siswa lintas kelas dan angkatan: menetapkan kebiasaan berbukti harian, memverifikasi jurnal (setujui/revisi/tolak), dan memberi nilai 1–100.",
     icon: "✅",
+    accent: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900",
   },
   {
     title: "Kepala Sekolah",
     desc: "Memantau analitik sekolah: ringkasan harian, tingkat verifikasi 30 hari, tren pengisian 7 hari, dan rata-rata nilai per kelas.",
     icon: "📊",
+    accent: "bg-violet-50 text-violet-600 ring-violet-100 dark:bg-violet-950/40 dark:text-violet-400 dark:ring-violet-900",
   },
   {
     title: "Orang Tua",
     desc: "Melihat riwayat dan detail jurnal anak, lalu berkomentar langsung — siswa dan guru wali otomatis menerima notifikasi.",
     icon: "💬",
+    accent: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900",
   },
   {
     title: "Admin Sekolah",
     desc: "Mengelola sekolah, tahun pelajaran, semester, akun seluruh peran, penugasan guru wali, template jurnal, serta bulk import/export Excel.",
     icon: "🛠️",
+    accent: "bg-rose-50 text-rose-600 ring-rose-100 dark:bg-rose-950/40 dark:text-rose-400 dark:ring-rose-900",
   },
 ] as const;
 
@@ -82,14 +88,27 @@ const FAQS = [
   },
 ] as const;
 
+/** Lencana logo kecil — kotak gradient dengan inisial. */
+function LogoMark({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white shadow-sm ${className}`}
+      aria-hidden
+    >
+      JK
+    </span>
+  );
+}
+
 export default function LandingPage() {
   return (
     <div className="scroll-smooth">
       {/* Header */}
-      <header className="glass-panel sticky top-0 z-10 border-x-0 border-t-0">
+      <header className="sticky top-0 z-20 border-b border-slate-200/70 bg-white/80 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/80">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
-          <span className="text-sm font-semibold tracking-tight">
-            Jurnal Karakter
+          <span className="flex items-center gap-2.5">
+            <LogoMark />
+            <span className="text-sm font-semibold tracking-tight">Jurnal Karakter</span>
           </span>
           <nav className="flex items-center gap-5 text-sm">
             <a href="#fitur" className="hidden text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 sm:inline">
@@ -103,7 +122,7 @@ export default function LandingPage() {
             </a>
             <Link
               href="/login"
-              className="rounded-full bg-brand-600 px-4 py-1.5 font-medium text-white transition hover:bg-brand-500"
+              className="rounded-full bg-brand-600 px-4 py-1.5 font-medium text-white shadow-sm transition hover:bg-brand-500 hover:shadow"
             >
               Masuk
             </Link>
@@ -114,32 +133,45 @@ export default function LandingPage() {
       <main>
         {/* Hero */}
         <section className="relative overflow-hidden">
+          {/* Latar gradient + glow dekoratif */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[480px] bg-gradient-to-b from-brand-50 to-transparent dark:from-brand-900/20"
+            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[560px] bg-gradient-to-b from-brand-100 via-brand-50 to-transparent dark:from-brand-900/40 dark:via-brand-900/10"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-1/2 top-[-120px] -z-10 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-brand-400/25 blur-3xl dark:bg-brand-500/20"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10 opacity-[0.35] [background-image:linear-gradient(to_right,rgb(148_163_184/0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgb(148_163_184/0.12)_1px,transparent_1px)] [background-size:32px_32px] [mask-image:radial-gradient(ellipse_at_top,black,transparent_65%)]"
           />
           <div className="mx-auto max-w-6xl px-6 pb-20 pt-24 text-center">
-            <p className="mx-auto mb-6 w-fit rounded-full border border-brand-500/30 bg-brand-50 px-4 py-1 text-xs font-medium text-brand-600 dark:bg-brand-900/30">
+            <p className="mx-auto mb-6 flex w-fit items-center gap-2 rounded-full border border-brand-500/30 bg-white/70 px-4 py-1 text-xs font-medium text-brand-700 shadow-sm backdrop-blur dark:bg-brand-900/30 dark:text-brand-300">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-500" />
               Mendukung Gerakan 7 Kebiasaan Anak Indonesia Hebat
             </p>
             <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl">
-              Jurnal Karakter &amp; Monitoring Peserta Didik
+              Jurnal Karakter &amp;{" "}
+              <span className="bg-gradient-to-r from-brand-600 to-brand-500 bg-clip-text text-transparent">
+                Monitoring Peserta Didik
+              </span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base text-slate-600 dark:text-slate-400 sm:text-lg">
               Satu platform bagi sekolah untuk menumbuhkan kebiasaan baik:
               siswa mencatat, guru wali membina dan menilai, orang tua
               mendampingi, kepala sekolah memantau.
             </p>
-            <div className="mt-8 flex items-center justify-center gap-3">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/login"
-                className="rounded-full bg-brand-600 px-6 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-brand-500 hover:shadow-md"
+                className="rounded-full bg-brand-600 px-6 py-3 text-sm font-medium text-white shadow-md shadow-brand-600/20 transition hover:bg-brand-500 hover:shadow-lg hover:shadow-brand-600/30"
               >
                 Masuk ke Sistem
               </Link>
               <a
                 href="#fitur"
-                className="glass-panel rounded-full px-6 py-3 text-sm font-medium transition hover:shadow-md"
+                className="rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
               >
                 Lihat Fitur
               </a>
@@ -148,18 +180,20 @@ export default function LandingPage() {
         </section>
 
         {/* 7 Kebiasaan */}
-        <section className="mx-auto max-w-6xl px-6 pb-16">
-          <div className="glass-panel rounded-2xl p-6 sm:p-8">
-            <h2 className="text-center text-sm font-semibold uppercase tracking-wide text-brand-600">
+        <section className="mx-auto -mt-4 max-w-6xl px-6 pb-16">
+          <div className="glass-panel rounded-2xl p-6 shadow-md sm:p-8">
+            <h2 className="text-center text-sm font-semibold uppercase tracking-wider text-brand-600">
               7 Kebiasaan Anak Indonesia Hebat
             </h2>
-            <ul className="mt-5 flex flex-wrap justify-center gap-2">
+            <ul className="mt-5 flex flex-wrap justify-center gap-2.5">
               {HABITS.map((h, i) => (
                 <li
                   key={h}
-                  className="rounded-full border border-slate-200 bg-white/70 px-4 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900/70"
+                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-1.5 text-sm transition hover:border-brand-300 hover:bg-brand-50 dark:border-slate-700 dark:bg-slate-800/70"
                 >
-                  <span className="mr-1.5 font-semibold text-brand-600">{i + 1}.</span>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[11px] font-semibold text-white">
+                    {i + 1}
+                  </span>
                   {h}
                 </li>
               ))}
@@ -176,13 +210,19 @@ export default function LandingPage() {
             Berbasis relasi Guru Wali ↔ Peserta Didik — guru wali dapat membina
             siswa lintas kelas dan angkatan tanpa mengubah data siswa.
           </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {ROLES.map((r) => (
-              <div key={r.title} className="glass-panel rounded-2xl p-6">
-                <div className="text-2xl" aria-hidden>
+              <div
+                key={r.title}
+                className="glass-panel group rounded-2xl p-6 transition duration-200 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <div
+                  className={`flex h-11 w-11 items-center justify-center rounded-xl text-xl ring-1 ${r.accent}`}
+                  aria-hidden
+                >
                   {r.icon}
                 </div>
-                <h3 className="mt-3 font-semibold">{r.title}</h3>
+                <h3 className="mt-4 font-semibold">{r.title}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
                   {r.desc}
                 </p>
@@ -196,10 +236,13 @@ export default function LandingPage() {
           <h2 className="text-center text-2xl font-bold tracking-tight sm:text-3xl">
             Bagaimana alurnya?
           </h2>
-          <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <ol className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {STEPS.map((s, i) => (
-              <li key={s.title} className="glass-panel rounded-2xl p-6">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white">
+              <li
+                key={s.title}
+                className="glass-panel relative rounded-2xl p-6 transition duration-200 hover:-translate-y-1 hover:shadow-lg"
+              >
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-semibold text-white shadow-sm">
                   {i + 1}
                 </span>
                 <h3 className="mt-4 font-semibold">{s.title}</h3>
@@ -218,7 +261,7 @@ export default function LandingPage() {
           </h2>
           <div className="mt-8 space-y-3">
             {FAQS.map((f) => (
-              <details key={f.q} className="glass-panel group rounded-2xl px-6 py-4">
+              <details key={f.q} className="glass-panel group rounded-2xl px-6 py-4 transition hover:shadow-md">
                 <summary className="cursor-pointer list-none text-sm font-medium [&::-webkit-details-marker]:hidden">
                   <span className="mr-2 inline-block text-brand-600 transition group-open:rotate-90">
                     ▸
@@ -235,17 +278,21 @@ export default function LandingPage() {
 
         {/* CTA akhir */}
         <section className="mx-auto max-w-6xl px-6 pb-24">
-          <div className="glass-panel rounded-3xl p-10 text-center sm:p-14">
-            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 to-brand-800 p-10 text-center shadow-xl sm:p-14">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 opacity-20 [background-image:radial-gradient(circle_at_20%_20%,white,transparent_40%),radial-gradient(circle_at_80%_80%,white,transparent_40%)]"
+            />
+            <h2 className="relative text-2xl font-bold tracking-tight text-white sm:text-3xl">
               Siap menumbuhkan kebiasaan baik di sekolah Anda?
             </h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm text-slate-600 dark:text-slate-400">
+            <p className="relative mx-auto mt-3 max-w-xl text-sm text-brand-100">
               Masuk dengan akun yang diberikan Admin sekolah. Peserta didik
               cukup memakai NISN.
             </p>
             <Link
               href="/login"
-              className="mt-7 inline-block rounded-full bg-brand-600 px-8 py-3 text-sm font-medium text-white shadow-sm transition hover:bg-brand-500 hover:shadow-md"
+              className="relative mt-7 inline-block rounded-full bg-white px-8 py-3 text-sm font-semibold text-brand-700 shadow-md transition hover:shadow-lg"
             >
               Masuk ke Sistem
             </Link>
@@ -256,7 +303,10 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-slate-200 py-8 dark:border-slate-800">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 text-xs text-slate-500 sm:flex-row">
-          <span>Jurnal Karakter &amp; Monitoring Peserta Didik</span>
+          <span className="flex items-center gap-2">
+            <LogoMark className="h-6 w-6 rounded-lg text-[11px]" />
+            Jurnal Karakter &amp; Monitoring Peserta Didik
+          </span>
           <span>
             Dibangun dengan Next.js · Hono · Neon — di Cloudflare Workers
           </span>

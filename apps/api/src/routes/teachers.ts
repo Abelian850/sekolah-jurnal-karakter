@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { PERMISSIONS, nipToEmail, NIP_REGEX, hashPassword } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
-import { teachers, users, auditLogs } from "../db/schema";
+import { teachers, users, auditLogs, teacherStudent, verifications } from "../db/schema";
 import { createUserAccount, deleteUserAccount, getRoleId } from "../services/user-provisioning";
 import type { Env, Variables } from "../index";
 
@@ -235,6 +235,82 @@ teachersRoute.patch(
   }
 );
 
+/**
+ * DELETE /teachers/:id - hapus guru beserta akun login-nya. Untuk mengoreksi
+ * salah input data. Menghapus baris `users` akan meng-cascade ke `teachers`
+ * dan `evidence_requirements` (onDelete: cascade di schema).
+ *
+ * PENGAMANAN: relasi `teacher_student` (penugasan wali) dan `verifications`
+ * (riwayat penilaian) memakai onDelete: restrict, jadi guru yang sudah pernah
+ * ditugaskan atau menilai TIDAK boleh terhapus begitu saja. Di sini kita
+ * cek dini dan menolak dengan pesan ramah (409) agar admin tidak kehilangan
+ * data nilai/penugasan secara tak sengaja.
+ */
+teachersRoute.delete(
+  "/:id",
+  authMiddleware,
+  requirePermission(PERMISSIONS.TEACHER_MANAGE),
+  async (c) => {
+    const db = c.get("db");
+    const admin = c.get("user");
+    const id = c.req.param("id");
+
+    const [teacher] = await db.select().from(teachers).where(eq(teachers.id, id));
+    if (!teacher) {
+      return c.json({ error: "not_found", message: "Guru tidak ditemukan", statusCode: 404 }, 404);
+    }
+
+    const [assignment] = await db
+      .select({ id: teacherStudent.id })
+      .from(teacherStudent)
+      .where(eq(teacherStudent.teacherId, id))
+      .limit(1);
+    if (assignment) {
+      return c.json(
+        {
+          error: "conflict",
+          message:
+            "Guru ini masih punya penugasan sebagai Guru Wali. Cabut/hapus penugasannya dulu di menu Penugasan Guru Wali sebelum menghapus guru.",
+          statusCode: 409,
+        },
+        409
+      );
+    }
+
+    const [verification] = await db
+      .select({ id: verifications.id })
+      .from(verifications)
+      .where(eq(verifications.teacherId, id))
+      .limit(1);
+    if (verification) {
+      return c.json(
+        {
+          error: "conflict",
+          message:
+            "Guru ini sudah pernah menilai/memverifikasi jurnal, jadi datanya tidak bisa dihapus demi menjaga riwayat penilaian.",
+          statusCode: 409,
+        },
+        409
+      );
+    }
+
+    // Aman dihapus: hapus akun user -> cascade ke baris teachers & evidence_requirements.
+    await deleteUserAccount(db, teacher.userId);
+
+    await db.insert(auditLogs).values({
+      userId: admin.sub,
+      action: "delete",
+      tableName: "teachers",
+      recordId: id,
+      oldValue: teacher,
+      ipAddress: c.req.header("cf-connecting-ip") ?? null,
+    });
+
+    return c.json({ data: { ok: true } });
+  }
+);
+
+// (toggle status guru wali)
 teachersRoute.patch(
   "/:id/toggle-wali",
   authMiddleware,
