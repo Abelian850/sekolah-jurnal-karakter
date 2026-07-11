@@ -96,9 +96,39 @@ dua mode + laporan gagal per baris; (f) toggle status Guru Wali (dulu bug);
 - `docs/tutorial-penggunaan.md` BELUM diperbarui untuk 4 revisi ini —
   masuk Fase 10 (dokumentasi lengkap).
 
+## Revisi yang direncanakan user (eksekusi besok / nanti sore)
+
+**Fitur Kelulusan & Kenaikan Kelas** — belum ada sama sekali; siswa lulus
+saat ini tetap aktif selamanya. Keputusan desain (sudah disepakati):
+JANGAN hapus data alumni (jurnal/verifikasi/nilai mereferensikan students;
+FK akan menolak, dan sekolah butuh arsip). Yang dibangun:
+
+1. **Kelulusan massal**: Admin menandai satu angkatan (mis. semua
+   `gradeLevel` IX) sebagai lulus -> `students.isActive = false` +
+   `users.isActive = false` (login otomatis tertolak — Auth.js sudah
+   mengecek `users.isActive`; riwayat jurnal tetap utuh). Pertimbangkan
+   kolom status/`graduatedAt` agar alumni bisa dibedakan dari siswa
+   nonaktif sebab lain (pindah/keluar).
+2. **Kenaikan kelas massal**: naikkan sisanya per angkatan
+   (VII->VIII, VIII->IX) + ganti `className` (mis. "VII A" -> "VIII A";
+   sediakan pemetaan yang bisa diedit, jangan asal ganti angka romawi).
+3. **Filter aktif**: daftar siswa admin, penugasan wali (tunggal & massal),
+   impor/ekspor, dan statistik hanya menampilkan siswa aktif secara
+   default (opsi "tampilkan alumni/nonaktif" di daftar siswa).
+4. **Lepas penugasan wali** siswa yang lulus (`teacher_student.isActive =
+   false` + `unassignedAt`) supaya dashboard guru wali bersih.
+5. Semua aksi massal: pola laporan per baris seperti /teachers/bulk, plus
+   `audit_logs` per perubahan. Jalankan SETELAH tahun ajaran baru
+   diaktifkan, urutan: kelulusan dulu, baru kenaikan kelas.
+6. Uji manual: alumni tidak bisa login; jurnal lama alumni tetap terbaca
+   dari dashboard KS/orang tua; penugasan massal tidak menawarkan alumni;
+   angkatan campuran (siswa tinggal kelas) bisa dikecualikan per siswa
+   dari kenaikan massal.
+
 ## Rencana berikutnya
 
 1. Push + migrasi + uji manual di atas.
-2. Mulai Fase 9: ganti kata sandi mandiri (makin penting — sandi awal
+2. Eksekusi revisi Kelulusan & Kenaikan Kelas di atas.
+3. Mulai Fase 9: ganti kata sandi mandiri (makin penting — sandi awal
    guru = NIP), kelengkapan audit log, backup/restore, hardening
    (lihat persiapan di catatan 10 Juli sesi 2).
