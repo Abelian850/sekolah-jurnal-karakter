@@ -1,10 +1,17 @@
+import Image from "next/image";
 import Link from "next/link";
 
 /**
  * Landing page publik. Server component murni — tanpa dependensi baru,
  * tanpa JS klien; FAQ memakai <details> native. Gaya: modern biru
- * profesional (gradient hero halus, kartu berbayang, ikon berlatar warna),
- * konsisten dengan warna brand + utility .glass-panel dashboard.
+ * profesional (hero berfoto latar penuh + overlay gradasi biru gelap,
+ * kartu berbayang, ikon berlatar warna), konsisten dengan warna brand +
+ * utility .glass-panel dashboard.
+ *
+ * Aset di apps/web/public/ (saat ini PLACEHOLDER — timpa dengan aset asli
+ * tanpa mengubah kode, nama file harus sama):
+ * - /logo.png  : logo sekolah (persegi, disarankan >= 256x256)
+ * - /hero.webp : foto latar hero (disarankan 1600x900, < 300KB)
  */
 
 const ROLES = [
@@ -88,15 +95,17 @@ const FAQS = [
   },
 ] as const;
 
-/** Lencana logo kecil — kotak gradient dengan inisial. */
-function LogoMark({ className = "" }: { className?: string }) {
+/** Logo sekolah dari /public/logo.png (placeholder sampai diganti user). */
+function LogoMark({ size = 32, className = "" }: { size?: number; className?: string }) {
   return (
-    <span
-      className={`inline-flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-sm font-bold text-white shadow-sm ${className}`}
-      aria-hidden
-    >
-      JK
-    </span>
+    <Image
+      src="/logo.png"
+      alt="Logo sekolah"
+      width={size}
+      height={size}
+      className={`rounded-xl shadow-sm ${className}`}
+      priority
+    />
   );
 }
 
@@ -131,33 +140,34 @@ export default function LandingPage() {
       </header>
 
       <main>
-        {/* Hero */}
-        <section className="relative overflow-hidden">
-          {/* Latar gradient + glow dekoratif */}
-          <div
+        {/* Hero — foto latar penuh + overlay gradasi biru gelap */}
+        <section className="relative isolate overflow-hidden">
+          <Image
+            src="/hero.webp"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            className="-z-20 object-cover"
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[560px] bg-gradient-to-b from-brand-100 via-brand-50 to-transparent dark:from-brand-900/40 dark:via-brand-900/10"
           />
           <div
             aria-hidden
-            className="pointer-events-none absolute left-1/2 top-[-120px] -z-10 h-[420px] w-[720px] -translate-x-1/2 rounded-full bg-brand-400/25 blur-3xl dark:bg-brand-500/20"
+            className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-slate-950/85 via-brand-900/75 to-slate-950/90"
           />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 -z-10 opacity-[0.35] [background-image:linear-gradient(to_right,rgb(148_163_184/0.12)_1px,transparent_1px),linear-gradient(to_bottom,rgb(148_163_184/0.12)_1px,transparent_1px)] [background-size:32px_32px] [mask-image:radial-gradient(ellipse_at_top,black,transparent_65%)]"
-          />
-          <div className="mx-auto max-w-6xl px-6 pb-20 pt-24 text-center">
-            <p className="mx-auto mb-6 flex w-fit items-center gap-2 rounded-full border border-brand-500/30 bg-white/70 px-4 py-1 text-xs font-medium text-brand-700 shadow-sm backdrop-blur dark:bg-brand-900/30 dark:text-brand-300">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-500" />
+          <div className="mx-auto max-w-6xl px-6 pb-24 pt-28 text-center">
+            <LogoMark size={72} className="mx-auto mb-6 ring-2 ring-white/30" />
+            <p className="mx-auto mb-6 flex w-fit items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1 text-xs font-medium text-brand-100 shadow-sm backdrop-blur">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-200" />
               Mendukung Gerakan 7 Kebiasaan Anak Indonesia Hebat
             </p>
-            <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl">
+            <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
               Jurnal Karakter &amp;{" "}
-              <span className="bg-gradient-to-r from-brand-600 to-brand-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-brand-200 to-brand-500 bg-clip-text text-transparent">
                 Monitoring Peserta Didik
               </span>
             </h1>
-            <p className="mx-auto mt-5 max-w-2xl text-base text-slate-600 dark:text-slate-400 sm:text-lg">
+            <p className="mx-auto mt-5 max-w-2xl text-base text-slate-200 sm:text-lg">
               Satu platform bagi sekolah untuk menumbuhkan kebiasaan baik:
               siswa mencatat, guru wali membina dan menilai, orang tua
               mendampingi, kepala sekolah memantau.
@@ -167,14 +177,14 @@ export default function LandingPage() {
                 href="/login"
                 className="rounded-full bg-brand-600 px-6 py-3 text-sm font-medium text-white shadow-md shadow-brand-600/20 transition hover:bg-brand-500 hover:shadow-lg hover:shadow-brand-600/30"
               >
-                Masuk ke Sistem
+                Isi Jurnal
               </Link>
-              <a
-                href="#fitur"
-                className="rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:border-slate-400 hover:shadow-md dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              <Link
+                href="/login"
+                className="rounded-full border border-white/40 bg-white/10 px-6 py-3 text-sm font-medium text-white shadow-sm backdrop-blur transition hover:bg-white/20 hover:shadow-md"
               >
-                Lihat Fitur
-              </a>
+                Wali Kelas
+              </Link>
             </div>
           </div>
         </section>
