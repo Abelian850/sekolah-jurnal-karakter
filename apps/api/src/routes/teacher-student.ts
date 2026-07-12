@@ -73,6 +73,30 @@ teacherStudentRoute.post(
     const admin = c.get("user");
     const body = c.req.valid("json");
 
+    // Alumni/siswa nonaktif tidak bisa ditugaskan ke Guru Wali (fitur
+    // Kelulusan): riwayat binaan lama tetap tersimpan, tapi penugasan
+    // baru hanya untuk siswa aktif.
+    const [targetStudent] = await db
+      .select({ id: students.id, isActive: students.isActive, fullName: students.fullName })
+      .from(students)
+      .where(eq(students.id, body.studentId));
+    if (!targetStudent) {
+      return c.json(
+        { error: "not_found", message: "Peserta didik tidak ditemukan", statusCode: 404 },
+        404
+      );
+    }
+    if (!targetStudent.isActive) {
+      return c.json(
+        {
+          error: "bad_request",
+          message: `${targetStudent.fullName} sudah lulus/nonaktif — tidak bisa ditugaskan ke Guru Wali`,
+          statusCode: 400,
+        },
+        400
+      );
+    }
+
     const [currentAssignment] = await db
       .select()
       .from(teacherStudent)
@@ -168,14 +192,24 @@ teacherStudentRoute.post(
     const byId =
       studentIds.length > 0
         ? await db
-            .select({ id: students.id, nisn: students.nisn, fullName: students.fullName })
+            .select({
+              id: students.id,
+              nisn: students.nisn,
+              fullName: students.fullName,
+              isActive: students.isActive,
+            })
             .from(students)
             .where(inArray(students.id, studentIds))
         : [];
     const byNisn =
       nisns.length > 0
         ? await db
-            .select({ id: students.id, nisn: students.nisn, fullName: students.fullName })
+            .select({
+              id: students.id,
+              nisn: students.nisn,
+              fullName: students.fullName,
+              isActive: students.isActive,
+            })
             .from(students)
             .where(inArray(students.nisn, nisns))
         : [];
@@ -183,7 +217,10 @@ teacherStudentRoute.post(
     const nisnMap = new Map(byNisn.map((s) => [s.nisn as string, s]));
 
     // Daftar target terurut sesuai input; identifier dipakai di laporan.
-    const targets: Array<{ identifier: string; student?: { id: string; fullName: string } }> = [
+    const targets: Array<{
+      identifier: string;
+      student?: { id: string; fullName: string; isActive: boolean };
+    }> = [
       ...studentIds.map((id) => ({ identifier: id, student: idMap.get(id) })),
       ...nisns.map((nisn) => ({ identifier: `NISN ${nisn}`, student: nisnMap.get(nisn) })),
     ];
@@ -202,6 +239,15 @@ teacherStudentRoute.post(
             identifier,
             success: false,
             message: `${identifier} tidak ditemukan di database peserta didik`,
+          });
+          continue;
+        }
+        if (!student.isActive) {
+          results.push({
+            row: i + 1,
+            identifier: label,
+            success: false,
+            message: "Sudah lulus/nonaktif - tidak bisa ditugaskan",
           });
           continue;
         }

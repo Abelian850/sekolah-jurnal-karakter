@@ -13,15 +13,40 @@ interface Student {
   gradeLevel: string;
   gender: string | null;
   isActive: boolean;
+  status: string; // "aktif" | "lulus" | "pindah" | "keluar"
 }
 
-export default async function SiswaListPage() {
-  const students = await apiFetch<Student[]>("/students");
+const STATUS_LABEL: Record<string, string> = {
+  lulus: "Alumni",
+  pindah: "Pindah",
+  keluar: "Keluar",
+};
+
+export default async function SiswaListPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tampilkan?: string }>;
+}) {
+  // Default hanya siswa aktif; ?tampilkan=semua menyertakan alumni/nonaktif
+  // (fitur Kelulusan — alumni tidak dihapus, hanya disembunyikan).
+  const { tampilkan } = await searchParams;
+  const showAll = tampilkan === "semua";
+  const students = await apiFetch<Student[]>(
+    showAll ? "/students?includeInactive=true" : "/students"
+  );
 
   return (
     <div className="glass-panel rounded-2xl p-6">
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Peserta Didik</h1>
+        <div>
+          <h1 className="text-xl font-semibold">Peserta Didik</h1>
+          <Link
+            href={showAll ? "/dashboard/admin/siswa" : "/dashboard/admin/siswa?tampilkan=semua"}
+            className="text-xs text-brand-600 hover:underline"
+          >
+            {showAll ? "Sembunyikan alumni/nonaktif" : "Tampilkan alumni/nonaktif"}
+          </Link>
+        </div>
         <div className="flex gap-2">
           <ExportStudentsButton students={students} />
           <Link
@@ -56,6 +81,7 @@ export default async function SiswaListPage() {
               <th className="py-2">Nama</th>
               <th className="py-2">Kelas</th>
               <th className="py-2">Angkatan</th>
+              {showAll && <th className="py-2">Status</th>}
               <th className="py-2">Aksi</th>
             </tr>
           </thead>
@@ -67,6 +93,19 @@ export default async function SiswaListPage() {
                 <td className="py-2 font-medium">{s.fullName}</td>
                 <td className="py-2">{s.className}</td>
                 <td className="py-2">{s.gradeLevel}</td>
+                {showAll && (
+                  <td className="py-2">
+                    {s.isActive ? (
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                        Aktif
+                      </span>
+                    ) : (
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                        {STATUS_LABEL[s.status] ?? "Nonaktif"}
+                      </span>
+                    )}
+                  </td>
+                )}
                 <td className="py-2">
                   <div className="flex items-center gap-3">
                     <ResetStudentPasswordButton

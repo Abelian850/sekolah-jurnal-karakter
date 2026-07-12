@@ -167,6 +167,12 @@ export const students = pgTable(
     birthDate: date("birth_date"),
     photoUrl: text("photo_url"),
     isActive: boolean("is_active").notNull().default(true),
+    // Alasan status keaktifan (Kelulusan & Kenaikan Kelas): "aktif" |
+    // "lulus" | "pindah" | "keluar". isActive tetap satu-satunya flag
+    // operasional (login, filter); status hanya MEMBEDAKAN alumni dari
+    // siswa nonaktif sebab lain. Data alumni TIDAK PERNAH dihapus.
+    status: varchar("status", { length: 10 }).notNull().default("aktif"),
+    graduatedAt: timestamp("graduated_at", { withTimezone: true }),
   },
   (table) => ({
     nisIdx: uniqueIndex("students_nis_idx").on(table.schoolId, table.nis),

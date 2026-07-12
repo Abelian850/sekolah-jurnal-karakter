@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { PERMISSIONS, nisnToEmail, NISN_REGEX, hashPassword } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
-import { students, users, auditLogs, journals } from "../db/schema";
+import { students, users, auditLogs, journals, teacherStudent } from "../db/schema";
 import { createUserAccount, deleteUserAccount } from "../services/user-provisioning";
 import type { Env, Variables } from "../index";
 
@@ -69,11 +69,18 @@ studentsRoute.get(
     const db = c.get("db");
     const schoolId = c.req.query("schoolId");
     const className = c.req.query("className");
+    // Default: HANYA siswa aktif (alumni/nonaktif disembunyikan dari
+    // daftar, penugasan wali, dan ekspor). ?includeInactive=true untuk
+    // menampilkan semuanya (opsi "tampilkan alumni" di daftar siswa).
+    const includeInactive = c.req.query("includeInactive") === "true";
 
     let result = schoolId
       ? await db.select().from(students).where(eq(students.schoolId, schoolId))
       : await db.select().from(students);
 
+    if (!includeInactive) {
+      result = result.filter((s) => s.isActive);
+    }
     if (className) {
       result = result.filter((s) => s.className === className);
     }
@@ -400,5 +407,235 @@ studentsRoute.post(
     }
 
     return c.json({ data: results });
+  }
+);
+
+// ---------- KELULUSAN & KENAIKAN KELAS (lihat docs/catatan-sesi-2026-07-11.md) ----------
+/**
+ * PRINSIP: data alumni TIDAK PERNAH dihapus — jurnal/verifikasi/nilai
+ * mereferensikan students (FK), dan sekolah butuh arsip. Kelulusan hanya
+ * menonaktifkan: students.isActive=false + status="lulus" + graduatedAt,
+ * users.isActive=false (login otomatis tertolak — Auth.js mengecek
+ * users.isActive), dan penugasan wali dilepas (teacher_student.isActive=
+ * false + unassignedAt) supaya dashboard Guru Wali bersih.
+ *
+ * Urutan operasional tiap tahun ajaran baru: KELULUSAN dulu, baru
+ * KENAIKAN KELAS (supaya angkatan tertinggi tidak ikut "naik").
+ */
+
+const graduateBulkSchema = z.object({
+  schoolId: z.string().uuid(),
+  gradeLevel: z.string().min(1).max(10), // mis. "IX" — satu angkatan penuh
+  // Siswa tinggal kelas / ditunda kelulusannya: dikecualikan per siswa.
+  excludeStudentIds: z.array(z.string().uuid()).max(1000).optional(),
+});
+
+/**
+ * POST /students/graduate-bulk - tandai SATU ANGKATAN sebagai lulus.
+ * Pola laporan per baris sama dengan /students/bulk: tiap siswa diproses
+ * independen + satu baris audit_logs per siswa. Siswa yang sudah nonaktif
+ * tidak pernah terpilih (filter isActive=true di query).
+ */
+studentsRoute.post(
+  "/graduate-bulk",
+  authMiddleware,
+  requirePermission(PERMISSIONS.STUDENT_MANAGE),
+  zValidator("json", graduateBulkSchema),
+  async (c) => {
+    const db = c.get("db");
+    const admin = c.get("user");
+    const { schoolId, gradeLevel, excludeStudentIds } = c.req.valid("json");
+    const excluded = new Set(excludeStudentIds ?? []);
+
+    const candidates = await db
+      .select()
+      .from(students)
+      .where(
+        and(
+          eq(students.schoolId, schoolId),
+          eq(students.gradeLevel, gradeLevel),
+          eq(students.isActive, true)
+        )
+      );
+
+    const results: Array<{
+      row: number;
+      nisn: string | null;
+      fullName: string;
+      success: boolean;
+      message?: string;
+    }> = [];
+    let excludedCount = 0;
+    const graduatedAt = new Date();
+
+    let row = 0;
+    for (const s of candidates) {
+      if (excluded.has(s.id)) {
+        excludedCount++;
+        continue;
+      }
+      row++;
+      try {
+        await db
+          .update(students)
+          .set({ isActive: false, status: "lulus", graduatedAt })
+          .where(eq(students.id, s.id));
+        await db.update(users).set({ isActive: false }).where(eq(users.id, s.userId));
+        await db
+          .update(teacherStudent)
+          .set({ isActive: false, unassignedAt: graduatedAt })
+          .where(and(eq(teacherStudent.studentId, s.id), eq(teacherStudent.isActive, true)));
+
+        await db.insert(auditLogs).values({
+          userId: admin.sub,
+          action: "graduate",
+          tableName: "students",
+          recordId: s.id,
+          oldValue: { isActive: true, status: s.status },
+          newValue: { isActive: false, status: "lulus", graduatedAt },
+          ipAddress: c.req.header("cf-connecting-ip") ?? null,
+        });
+
+        results.push({ row, nisn: s.nisn, fullName: s.fullName, success: true });
+      } catch (err) {
+        results.push({
+          row,
+          nisn: s.nisn,
+          fullName: s.fullName,
+          success: false,
+          message: (err as Error).message,
+        });
+      }
+    }
+
+    return c.json({ data: { results, excludedCount } });
+  }
+);
+
+const promoteBulkSchema = z
+  .object({
+    schoolId: z.string().uuid(),
+    // Pemetaan kelas EKSPLISIT dan bisa diedit admin (mis. "VII A" ->
+    // "VIII A") — sengaja tidak menebak/mengganti angka romawi otomatis.
+    mappings: z
+      .array(
+        z.object({
+          fromClassName: z.string().min(2).max(20),
+          toClassName: z.string().min(2).max(20),
+          toGradeLevel: z.string().min(1).max(10),
+        })
+      )
+      .min(1)
+      .max(100),
+    // Siswa tinggal kelas: dikecualikan per siswa dari kenaikan massal.
+    excludeStudentIds: z.array(z.string().uuid()).max(1000).optional(),
+  })
+  .superRefine((val, ctx) => {
+    const seen = new Set<string>();
+    for (const m of val.mappings) {
+      if (seen.has(m.fromClassName)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Kelas asal "${m.fromClassName}" muncul lebih dari sekali dalam pemetaan`,
+          path: ["mappings"],
+        });
+      }
+      seen.add(m.fromClassName);
+      if (m.fromClassName === m.toClassName) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Pemetaan "${m.fromClassName}" tidak mengubah kelas — hapus baris ini atau perbaiki kelas tujuan`,
+          path: ["mappings"],
+        });
+      }
+    }
+  });
+
+/**
+ * POST /students/promote-bulk - kenaikan kelas massal per pemetaan kelas.
+ * Jalankan SETELAH graduate-bulk (angkatan tertinggi sudah nonaktif dan
+ * tidak akan terpilih karena filter isActive=true). Laporan per baris +
+ * audit_logs per siswa, pola sama dengan aksi massal lain.
+ */
+studentsRoute.post(
+  "/promote-bulk",
+  authMiddleware,
+  requirePermission(PERMISSIONS.STUDENT_MANAGE),
+  zValidator("json", promoteBulkSchema),
+  async (c) => {
+    const db = c.get("db");
+    const admin = c.get("user");
+    const { schoolId, mappings, excludeStudentIds } = c.req.valid("json");
+    const excluded = new Set(excludeStudentIds ?? []);
+
+    const results: Array<{
+      row: number;
+      nisn: string | null;
+      fullName: string;
+      from: string;
+      to: string;
+      success: boolean;
+      message?: string;
+    }> = [];
+    let excludedCount = 0;
+    let row = 0;
+
+    for (const m of mappings) {
+      const candidates = await db
+        .select()
+        .from(students)
+        .where(
+          and(
+            eq(students.schoolId, schoolId),
+            eq(students.className, m.fromClassName),
+            eq(students.isActive, true)
+          )
+        );
+
+      for (const s of candidates) {
+        if (excluded.has(s.id)) {
+          excludedCount++;
+          continue;
+        }
+        row++;
+        try {
+          await db
+            .update(students)
+            .set({ className: m.toClassName, gradeLevel: m.toGradeLevel })
+            .where(eq(students.id, s.id));
+
+          await db.insert(auditLogs).values({
+            userId: admin.sub,
+            action: "promote",
+            tableName: "students",
+            recordId: s.id,
+            oldValue: { className: s.className, gradeLevel: s.gradeLevel },
+            newValue: { className: m.toClassName, gradeLevel: m.toGradeLevel },
+            ipAddress: c.req.header("cf-connecting-ip") ?? null,
+          });
+
+          results.push({
+            row,
+            nisn: s.nisn,
+            fullName: s.fullName,
+            from: m.fromClassName,
+            to: m.toClassName,
+            success: true,
+          });
+        } catch (err) {
+          results.push({
+            row,
+            nisn: s.nisn,
+            fullName: s.fullName,
+            from: m.fromClassName,
+            to: m.toClassName,
+            success: false,
+            message: (err as Error).message,
+          });
+        }
+      }
+    }
+
+    return c.json({ data: { results, excludedCount } });
   }
 );

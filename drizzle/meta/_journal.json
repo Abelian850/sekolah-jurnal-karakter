@@ -50,6 +50,13 @@
       "when": 1783739199211,
       "tag": "0006_lively_lifeguard",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1783824444008,
+      "tag": "0007_violet_captain_flint",
+      "breakpoints": true
     }
   ]
 }

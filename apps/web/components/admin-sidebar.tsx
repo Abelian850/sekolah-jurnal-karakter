@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/dashboard/admin/guru", label: "Guru" },
   { href: "/dashboard/admin/kepala-sekolah", label: "Kepala Sekolah" },
   { href: "/dashboard/admin/siswa", label: "Peserta Didik" },
+  { href: "/dashboard/admin/kelulusan-kenaikan", label: "Kelulusan & Kenaikan" },
   { href: "/dashboard/admin/orang-tua", label: "Orang Tua" },
   { href: "/dashboard/admin/penugasan-guru-wali", label: "Penugasan Guru Wali" },
   { href: "/dashboard/admin/jurnal-template", label: "Template Jurnal" },
