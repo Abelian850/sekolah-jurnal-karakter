@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { apiFetch, ApiRequestError } from "@/lib/api-client";
+import { apiFetch, apiUpload, ApiRequestError } from "@/lib/api-client";
 import { getTodayDateWIB } from "@/lib/date";
 
 export async function createTodayJournal() {
@@ -49,4 +49,14 @@ export async function submitJournal(journalId: string) {
   await apiFetch(`/journals/${journalId}/submit`, { method: "PATCH" });
   revalidatePath("/dashboard/peserta-didik/jurnal");
   revalidatePath("/dashboard/peserta-didik/riwayat");
+}
+
+/**
+ * Unggah foto bukti (sudah dikompres di browser) ke R2 lewat API.
+ * Mengembalikan path relatif ("/api/foto/journal/...") untuk diisikan ke
+ * photoUrl item jurnal - penyimpanan ke item tetap lewat updateJournalItem.
+ */
+export async function uploadJournalPhoto(formData: FormData): Promise<string> {
+  const { path } = await apiUpload<{ path: string }>("/files/journal-photo", formData);
+  return path;
 }

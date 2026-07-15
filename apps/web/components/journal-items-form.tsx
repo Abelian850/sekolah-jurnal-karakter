@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import {
   updateJournalItem,
   submitJournal,
+  uploadJournalPhoto,
   type UpdateJournalItemPayload,
 } from "@/app/dashboard/peserta-didik/jurnal/actions";
 import type { JournalItemData } from "@/components/journal-items-view";
@@ -16,6 +17,42 @@ const STATUS_OPTIONS = [
   { value: "sebagian", label: "Sebagian" },
   { value: "selesai", label: "Selesai" },
 ] as const;
+
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // selaras batas keras di API
+
+/**
+ * Kompres foto di browser sebelum diunggah: sisi terpanjang maks 1600px,
+ * JPEG kualitas 0.8 - foto kamera HP 3-8MB menjadi +-200-400KB sehingga
+ * hemat kuota siswa & penyimpanan R2. Jika browser tidak bisa mendekode
+ * file (format asing), pakai file asli selama tipe & ukurannya masih sah.
+ */
+async function compressImage(file: File): Promise<Blob> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const MAX_SIDE = 1600;
+    const scale = Math.min(1, MAX_SIDE / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("canvas");
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", 0.8)
+    );
+    if (!blob) throw new Error("toBlob");
+    return blob;
+  } catch {
+    if (
+      file.size <= MAX_UPLOAD_BYTES &&
+      ["image/jpeg", "image/png", "image/webp"].includes(file.type)
+    ) {
+      return file;
+    }
+    throw new Error("Format foto tidak didukung. Pakai JPG, PNG, atau WebP maksimal 5MB.");
+  }
+}
 
 export interface EvidenceRequirementInfo {
   templateItemId: string;
@@ -62,6 +99,14 @@ function ItemRow({
   const [recordedTime, setRecordedTime] = useState(item.recordedTime?.slice(0, 5) ?? "");
   const [note, setNote] = useState(item.note ?? "");
   const [photoUrl, setPhotoUrl] = useState(item.photoUrl ?? "");
+  // Mode "unggah" jadi bawaan (paling ramah untuk siswa); "tautan"
+  // dipertahankan untuk foto yang sudah ada di layanan lain.
+  const [photoMode, setPhotoMode] = useState<"unggah" | "tautan">(() =>
+    item.photoUrl && !item.photoUrl.startsWith("/api/foto/") ? "tautan" : "unggah"
+  );
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadedNotSaved, setUploadedNotSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,10 +141,36 @@ function ItemRow({
         await updateJournalItem(journalId, item.id, payload);
         setSaved(true);
         onSaved(item.id, { status: effectiveStatus, note: trimmedNote, photoUrl: trimmedPhoto });
+        setUploadedNotSaved(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Gagal menyimpan.");
       }
     });
+  }
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // agar memilih file yang sama tetap memicu onChange
+    if (!file) return;
+
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const blob = await compressImage(file);
+      if (blob.size > MAX_UPLOAD_BYTES) {
+        throw new Error("Foto masih melebihi 5MB setelah dikompres. Coba foto lain.");
+      }
+      const formData = new FormData();
+      formData.append("file", blob, "bukti.jpg");
+      const path = await uploadJournalPhoto(formData);
+      setPhotoUrl(path);
+      setSaved(false);
+      setUploadedNotSaved(true);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Gagal mengunggah foto.");
+    } finally {
+      setUploading(false);
+    }
   }
 
   const needsNoteHint = (item.itemType === "checklist" || item.itemType === "waktu") && status === "belum";
@@ -162,16 +233,91 @@ function ItemRow({
         />
       )}
 
-      <input
-        value={photoUrl}
-        onChange={(e) => setPhotoUrl(e.target.value)}
-        placeholder={
-          isEvidenceRequired
-            ? "Tempel tautan (URL) foto bukti - WAJIB untuk kebiasaan ini hari ini"
-            : "Tempel tautan (URL) foto bukti (opsional)"
-        }
-        className={inputClass}
-      />
+      {/* Foto bukti - dua cara: unggah dari HP/komputer, atau tempel tautan */}
+      <div className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-slate-500">
+            Foto bukti{isEvidenceRequired ? " - WAJIB hari ini" : " (opsional)"}:
+          </span>
+          <div className="flex overflow-hidden rounded-lg border border-slate-300 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setPhotoMode("unggah")}
+              className={`px-3 py-1 font-medium ${
+                photoMode === "unggah"
+                  ? "bg-brand-600 text-white"
+                  : "bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+              }`}
+            >
+              Unggah Foto
+            </button>
+            <button
+              type="button"
+              onClick={() => setPhotoMode("tautan")}
+              className={`px-3 py-1 font-medium ${
+                photoMode === "tautan"
+                  ? "bg-brand-600 text-white"
+                  : "bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+              }`}
+            >
+              Tempel Tautan
+            </button>
+          </div>
+        </div>
+
+        {photoMode === "unggah" ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <label
+              className={`inline-flex cursor-pointer items-center rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800 ${
+                uploading ? "pointer-events-none opacity-60" : ""
+              }`}
+            >
+              {uploading ? "Mengunggah..." : photoUrl ? "Ganti Foto" : "Pilih Foto"}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={uploading}
+                onChange={handleFileChange}
+              />
+            </label>
+            {photoUrl && !uploading && (
+              <>
+                <a
+                  href={photoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm text-brand-600 underline-offset-2 hover:underline"
+                >
+                  Lihat foto
+                </a>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPhotoUrl("");
+                    setUploadedNotSaved(false);
+                  }}
+                  className="text-sm text-red-600 underline-offset-2 hover:underline"
+                >
+                  Hapus
+                </button>
+              </>
+            )}
+          </div>
+        ) : (
+          <input
+            value={photoUrl}
+            onChange={(e) => setPhotoUrl(e.target.value)}
+            placeholder="Tempel tautan (URL) foto bukti"
+            className={inputClass}
+          />
+        )}
+
+        {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
+        {uploadedNotSaved && !uploading && (
+          <p className="text-xs text-amber-600">Foto terunggah - jangan lupa klik Simpan.</p>
+        )}
+      </div>
 
       <div className="flex items-center gap-3">
         <button
