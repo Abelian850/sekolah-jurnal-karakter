@@ -117,7 +117,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-3">
           <span className="flex items-center gap-2.5">
             <LogoMark />
-            <span className="text-sm font-semibold tracking-tight">Jurnal Karakter</span>
+            <span className="text-sm font-semibold tracking-tight">SMP Negeri 30 Semarang</span>
           </span>
           <nav className="flex items-center gap-5 text-sm">
             <a href="#fitur" className="hidden text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 sm:inline">

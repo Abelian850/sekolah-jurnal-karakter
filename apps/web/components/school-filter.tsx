@@ -36,7 +36,7 @@ export function SchoolFilter({
       onChange={(e) => handleChange(e.target.value)}
       disabled={isPending}
       aria-label="Filter sekolah"
-      className="rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900/80"
+      className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-brand-500 disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
     >
       <option value="">Semua Sekolah</option>
       {schools.map((s) => (
