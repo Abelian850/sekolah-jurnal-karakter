@@ -16,3 +16,14 @@ export function nisnToEmail(nisn: string): string {
 
 /** NISN valid = 5-30 digit angka (standar nasional 10 digit, dibuat longgar). */
 export const NISN_REGEX = /^\d{5,30}$/;
+
+/**
+ * Angkatan (gradeLevel) diturunkan OTOMATIS dari kata pertama nama kelas:
+ * "IX A" -> "IX", "IX" -> "IX", "VII B" -> "VII". Dipakai API saat membuat/
+ * mengimpor siswa supaya admin cukup mengisi SATU kolom Kelas - dua kolom
+ * yang harus konsisten manual (Kelas + Angkatan) terbukti rawan salah ketik
+ * dan membuat kelulusan/kenaikan massal meleset.
+ */
+export function classNameToGradeLevel(className: string): string {
+  return className.trim().split(/\s+/)[0] ?? "";
+}

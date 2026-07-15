@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
-import { PERMISSIONS, nisnToEmail, NISN_REGEX, hashPassword } from "@sjk/shared";
+import { PERMISSIONS, nisnToEmail, NISN_REGEX, hashPassword, classNameToGradeLevel } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
 import { students, users, auditLogs, journals, teacherStudent } from "../db/schema";
@@ -21,8 +21,10 @@ const studentFields = {
   nis: z.string().min(1).max(30),
   nisn: z.string().regex(NISN_REGEX, "NISN harus berupa 5-30 digit angka"),
   fullName: z.string().min(3).max(255),
-  className: z.string().min(2).max(20),
-  gradeLevel: z.string().min(2).max(10),
+  className: z.string().min(1).max(20),
+  // Opsional sejak revisi Juli 2026: jika kosong, diturunkan otomatis dari
+  // kata pertama className (classNameToGradeLevel) - satu sumber kebenaran.
+  gradeLevel: z.string().min(1).max(10).optional(),
   gender: z.enum(["L", "P"]).optional(),
   birthDate: z.string().date().optional(),
 };
@@ -122,7 +124,7 @@ studentsRoute.post(
           nisn: body.nisn,
           fullName: body.fullName,
           className: body.className,
-          gradeLevel: body.gradeLevel,
+          gradeLevel: body.gradeLevel?.trim() || classNameToGradeLevel(body.className),
           gender: body.gender,
           birthDate: body.birthDate,
         })
@@ -191,7 +193,7 @@ studentsRoute.post(
             nisn: row.nisn,
             fullName: row.fullName,
             className: row.className,
-            gradeLevel: row.gradeLevel,
+            gradeLevel: row.gradeLevel?.trim() || classNameToGradeLevel(row.className),
             gender: row.gender,
             birthDate: row.birthDate,
           })

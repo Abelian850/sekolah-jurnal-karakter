@@ -17,7 +17,8 @@ async function createStudent(formData: FormData) {
       nisn: formData.get("nisn"),
       fullName: formData.get("fullName"),
       className: formData.get("className"),
-      gradeLevel: formData.get("gradeLevel"),
+      // gradeLevel sengaja tidak dikirim - API menurunkannya otomatis
+      // dari kata pertama className ("IX A" -> "IX").
       gender: formData.get("gender") || undefined,
       birthDate: formData.get("birthDate") || undefined,
     }),
@@ -80,25 +81,18 @@ export default async function SiswaBaruPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium">Kelas</label>
-            <input
-              name="className"
-              required
-              placeholder="VII A"
-              className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Angkatan</label>
-            <input
-              name="gradeLevel"
-              required
-              placeholder="VII"
-              className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80"
-            />
-          </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium">Kelas</label>
+          <input
+            name="className"
+            required
+            placeholder="IX"
+            className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80"
+          />
+          <p className="mt-1 text-xs text-slate-500">
+            Cukup tingkatnya saja (mis. &quot;IX&quot;) atau dengan rombel (mis. &quot;IX A&quot;).
+            Angkatan diisi otomatis dari kata pertama.
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

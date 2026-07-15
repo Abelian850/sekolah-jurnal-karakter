@@ -11,7 +11,8 @@ export interface StudentImportRow {
   nisn: string;
   fullName: string;
   className: string;
-  gradeLevel: string;
+  /** Opsional - jika kosong, API menurunkannya dari kata pertama className. */
+  gradeLevel?: string;
   gender?: "L" | "P";
   birthDate?: string;
 }

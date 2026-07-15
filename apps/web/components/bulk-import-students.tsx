@@ -18,7 +18,8 @@ import {
  *
  * Format kolom Excel yang diharapkan (baris pertama = header):
  * nis | nisn | fullName | className | gradeLevel | gender | birthDate
- * (email & password tidak ada lagi - akun dibuat otomatis, login = NISN)
+ * (email & password tidak ada lagi - akun dibuat otomatis, login = NISN;
+ * gradeLevel opsional - jika kosong diturunkan dari kata pertama className)
  */
 export function BulkImportStudents({ schools }: { schools: { id: string; name: string }[] }) {
   const [schoolId, setSchoolId] = useState(schools[0]?.id ?? "");
@@ -52,7 +53,7 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
           nisn: String(r.nisn ?? "").trim(),
           fullName: String(r.fullName ?? "").trim(),
           className: String(r.className ?? "").trim(),
-          gradeLevel: String(r.gradeLevel ?? "").trim(),
+          gradeLevel: String(r.gradeLevel ?? "").trim() || undefined,
           gender: r.gender ? (String(r.gender).trim() as "L" | "P") : undefined,
           birthDate: r.birthDate ? String(r.birthDate).trim() : undefined,
         }));
