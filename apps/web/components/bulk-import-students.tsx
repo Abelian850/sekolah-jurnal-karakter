@@ -29,6 +29,25 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
   const [submitting, setSubmitting] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
 
+  /** Unduh file template berisi header + satu baris contoh (pola sama
+   *  dengan bulk-import-teachers.tsx agar admin tidak menebak nama kolom). */
+  function downloadTemplate() {
+    const ws = XLSX.utils.json_to_sheet([
+      {
+        nis: "2024001",
+        nisn: "0123456789",
+        fullName: "Ani Rahmawati",
+        className: "VII A",
+        gradeLevel: "VII",
+        gender: "P",
+        birthDate: "2012-05-17",
+      },
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Peserta Didik");
+    XLSX.writeFile(wb, "template-import-siswa.xlsx");
+  }
+
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -86,6 +105,14 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
 
   return (
     <div className="flex flex-col gap-4">
+      <button
+        type="button"
+        onClick={downloadTemplate}
+        className="w-fit rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+      >
+        Unduh Template Excel
+      </button>
+
       <div>
         <label className="mb-1 block text-sm font-medium">Sekolah</label>
         <select

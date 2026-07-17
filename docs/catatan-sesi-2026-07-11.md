@@ -20,6 +20,22 @@ sengaja tidak didukung — nama tidak unik, rawan salah hapus.)
 - Uji manual tersisa: upload file NISN campuran (valid/tak
   terdaftar/punya jurnal/duplikat) dan cek laporan per baris + audit_logs.
 
+## Untuk dieksekusi besok: logo & foto latar halaman landing
+
+Referensi desain dari user (screenshot landing "7 KAIH"): hero dengan
+foto kelas sebagai latar penuh + overlay gradasi biru gelap, logo di
+pojok kiri atas, judul besar dua warna, dua tombol CTA (Isi Jurnal /
+Wali Kelas).
+
+- Aset yang harus disiapkan USER: file logo sekolah + foto latar yang
+  haknya jelas (idealnya foto kegiatan sekolah sendiri; hati-hati
+  lisensi & privasi wajah siswa jika pakai foto internet).
+- Implementasi: taruh aset di `apps/web/public/`, pakai `next/image` di
+  `app/page.tsx` dengan overlay gradasi agar teks tetap terbaca;
+  kompres foto (WebP, <300KB) supaya hero cepat dimuat.
+- Opsional: manfaatkan kolom `schools.logoUrl` (sudah ada di schema,
+  belum dipakai) agar logo diatur per sekolah dari data, bukan hardcode.
+
 ## Selesai: 4 revisi yang direncanakan (lihat catatan 10 Juli sesi 2)
 
 **1. Impor guru dari Excel + template** (`c3fd95f`)
