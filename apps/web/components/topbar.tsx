@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { auth, signOut } from "@/lib/auth";
 
 /**
@@ -26,6 +27,12 @@ export async function Topbar() {
           </span>
           <span className="hidden text-xs capitalize text-slate-500 sm:block">{role}</span>
         </div>
+        <Link
+          href="/dashboard/profil"
+          className="rounded-full border border-slate-200 px-4 py-1.5 text-sm font-medium text-slate-600 transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:bg-brand-900"
+        >
+          Ubah Sandi
+        </Link>
         <form
           action={async () => {
             "use server";

@@ -10,8 +10,8 @@
 
 ## Prioritas 1 — Finalisasi migrasi (±15 menit)
 
-1. [ ] Update secret `DATABASE_URL` di GitHub: repo → Settings → Secrets and variables → Actions. Nilai baru ada di `apps/api/.dev.vars`. (Satu secret ini dipakai deploy-api & deploy-web, otomatis diteruskan ke Cloudflare.)
-2. [ ] Push / re-run workflow deploy, pastikan `db:migrate` di CI lolos (harusnya "no migrations to run").
+1. [x] Update secret `DATABASE_URL` di GitHub — SELESAI 17 Juli.
+2. [x] Deploy: push `339785f` (Deploy Web #13) + re-run Deploy API #9 sukses — produksi (web & api worker) sudah menunjuk DB Singapore.
 3. [ ] Uji login produksi dengan `admin30@sekolah.com` — bandingkan kecepatannya.
 4. [ ] Uji login lokal (`npm run dev:web` + `dev:api`).
 5. [ ] Setelah semua terbukti jalan: hapus project Neon lama (us-east-1) agar tidak membingungkan.
@@ -20,10 +20,17 @@
 
 Urutan yang disarankan:
 
-1. [ ] **Ganti kata sandi mandiri** — paling mendesak: sandi awal guru = NIP dan siswa = NISN, keduanya bukan rahasia. Halaman profil + endpoint `PATCH /me/password` (verifikasi sandi lama, hash PBKDF2 baru).
+1. [x] **Ganti kata sandi mandiri** — SELESAI 18 Juli. Endpoint `PATCH /me/password` (verifikasi sandi lama, tolak hash argon2 lama dengan pesan jelas, audit log tanpa hash) + halaman `/dashboard/profil` (semua peran) + tombol "Ubah Sandi" di Topbar.
 2. [ ] **Kelengkapan audit log** — baru terpasang di modul kelulusan/kenaikan; tambahkan ke login (isi `last_login_at`), CRUD user, verifikasi jurnal, dan perubahan settings.
 3. [ ] **Backup/restore** — minimal dokumentasikan prosedur export via Neon (atau branch snapshot); Free plan punya point-in-time restore terbatas.
 4. [ ] **Hardening** — rate limiting login (Workers), validasi ukuran/jenis file upload foto bukti, review CORS `FRONTEND_ORIGIN`.
+
+## Prioritas 3 — Fitur baru: siswa paling rajin mengisi jurnal
+
+1. [ ] Endpoint agregasi baru di `apps/api/src/routes/analytics.ts` — misal `GET /analytics/top-students?days=30&limit=10`: hitung jumlah jurnal berstatus `submitted/approved` per siswa dari tabel `journals` (join `students`), urutkan menurun. Tidak perlu perubahan skema.
+2. [ ] Kartu "Siswa Terajin" di dashboard Kepala Sekolah (`apps/web/app/dashboard/kepala-sekolah/page.tsx`) dan Admin — tampilkan nama, kelas, jumlah pengisian.
+3. [ ] Batasi per sekolah (pakai `schoolId` dari JWT, pola sama dengan `GET /analytics/summary`).
+4. [ ] Opsional lanjutan: export guru (tombol Export Excel di daftar guru, pola sama `export-students-button.tsx`) dan statistik 7 Kebiasaan paling sering "selesai" dari `journal_items`.
 
 ## Opsional / catatan
 
