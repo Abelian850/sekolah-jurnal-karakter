@@ -52,7 +52,10 @@ app.use("*", logger());
 app.use("*", secureHeaders());
 app.use("*", async (c, next) => {
   const corsMiddleware = cors({
-    origin: c.env.FRONTEND_ORIGIN,
+    // Fail-closed (review Fase 9): jika FRONTEND_ORIGIN lupa di-set, string
+    // kosong tidak akan pernah cocok dengan Origin mana pun — lebih aman
+    // daripada default hono/cors yang terbuka ("*").
+    origin: c.env.FRONTEND_ORIGIN || "",
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   });

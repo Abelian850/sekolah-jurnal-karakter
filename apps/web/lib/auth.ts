@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
-import { eq } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 import { users, roles, teachers, students, principals, auditLogs } from "@sjk/api/src/db/schema";
 import type { Role } from "@sjk/shared";
 import { verifyPassword } from "@sjk/shared";
@@ -53,6 +53,29 @@ async function resolveSchoolId(
 }
 
 /**
+ * Rate limiting login (Fase 9 — hardening).
+ *
+ * Disimpan di tabel `audit_logs` (action "login_failed"), BUKAN di memori,
+ * karena Cloudflare Workers menjalankan banyak isolate paralel yang tidak
+ * berbagi memori — counter in-memory mudah di-bypass. Jendela hitung 15
+ * menit; melewati batas membuat authorize() menolak TANPA menjalankan
+ * verifikasi argon2 (hemat CPU + menutup brute force).
+ *
+ * Dua lapis batas:
+ * - per-akun  : 5 kegagalan / 15 menit — melindungi satu akun yang ditarget.
+ * - per-IP    : 20 kegagalan / 15 menit — menahan credential stuffing lintas
+ *               akun; longgar agar satu sekolah di balik NAT (satu IP publik)
+ *               tidak saling mengunci hanya karena beberapa siswa salah ketik.
+ *
+ * Kegagalan MEMBACA counter sengaja fail-open (login tetap diproses) agar
+ * gangguan DB tidak mengunci semua pengguna; kegagalan MENULIS log tidak
+ * pernah mengubah hasil login (pola yang sama dengan audit login sukses).
+ */
+const LOGIN_RATE_WINDOW_MS = 15 * 60 * 1000;
+const MAX_FAILED_PER_USER = 5;
+const MAX_FAILED_PER_IP = 20;
+
+/**
  * Auth.js (next-auth v5) dikonfigurasi dengan strategi JWT (bukan database
  * session), karena JWT inilah yang dikirim sebagai Bearer token ke backend
  * Hono di Cloudflare Workers untuk diverifikasi ulang (lihat
@@ -84,8 +107,51 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!identifier || !password) return null;
 
-        const sql = neon(process.env.DATABASE_URL as string);
-        const db = drizzle(sql);
+        const neonSql = neon(process.env.DATABASE_URL as string);
+        const db = drizzle(neonSql);
+
+        // IP diambil di awal karena dipakai rate limiting DAN audit log.
+        const ipAddress =
+          request?.headers?.get?.("cf-connecting-ip") ??
+          request?.headers?.get?.("x-forwarded-for")?.split(",")[0]?.trim() ??
+          null;
+        const windowStart = new Date(Date.now() - LOGIN_RATE_WINDOW_MS);
+
+        // Catat kegagalan login. userId null = identifier tidak dikenal
+        // (tetap dihitung per-IP). Gagal-tulis ditelan — lihat komentar
+        // di konstanta LOGIN_RATE_* di atas.
+        const logFailedLogin = async (userId: string | null) => {
+          try {
+            await db.insert(auditLogs).values({
+              userId,
+              action: "login_failed",
+              tableName: "users",
+              recordId: userId,
+              ipAddress,
+            });
+          } catch {
+            // Sengaja ditelan.
+          }
+        };
+
+        // ---- Rate limit per-IP (sebelum query user apa pun) ----
+        try {
+          if (ipAddress) {
+            const [ipFails] = await db
+              .select({ count: sql<number>`count(*)::int` })
+              .from(auditLogs)
+              .where(
+                and(
+                  eq(auditLogs.action, "login_failed"),
+                  eq(auditLogs.ipAddress, ipAddress),
+                  gte(auditLogs.createdAt, windowStart)
+                )
+              );
+            if ((ipFails?.count ?? 0) >= MAX_FAILED_PER_IP) return null;
+          }
+        } catch {
+          // Fail-open — lihat komentar di atas.
+        }
 
         // Identifier tanpa "@" diperlakukan sebagai NISN siswa ATAU NIP guru
         // (pasca-Fase 6 siswa login dengan NISN; revisi Juli 2026 guru login
@@ -113,7 +179,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               .from(teachers)
               .where(eq(teachers.nip, trimmed))
               .limit(1);
-            if (!teacherRow) return null;
+            if (!teacherRow) {
+              await logFailedLogin(null);
+              return null;
+            }
             userId = teacherRow.userId;
           }
         }
@@ -131,10 +200,33 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           .where(email ? eq(users.email, email) : eq(users.id, userId as string))
           .limit(1);
 
-        if (!row || !row.isActive) return null;
+        if (!row || !row.isActive) {
+          await logFailedLogin(row?.id ?? null);
+          return null;
+        }
+
+        // ---- Rate limit per-akun (sebelum verifikasi argon2) ----
+        try {
+          const [userFails] = await db
+            .select({ count: sql<number>`count(*)::int` })
+            .from(auditLogs)
+            .where(
+              and(
+                eq(auditLogs.action, "login_failed"),
+                eq(auditLogs.userId, row.id),
+                gte(auditLogs.createdAt, windowStart)
+              )
+            );
+          if ((userFails?.count ?? 0) >= MAX_FAILED_PER_USER) return null;
+        } catch {
+          // Fail-open — lihat komentar di atas.
+        }
 
         const passwordValid = await verifyPassword(password, row.passwordHash);
-        if (!passwordValid) return null;
+        if (!passwordValid) {
+          await logFailedLogin(row.id);
+          return null;
+        }
 
         const schoolId = await resolveSchoolId(db, row.id, row.roleName as Role);
 
@@ -143,10 +235,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         // pernah menggagalkan login itu sendiri (mis. saat DB sesaat
         // menolak write); login tetap sah karena password sudah terverifikasi.
         try {
-          const ipAddress =
-            request?.headers?.get?.("cf-connecting-ip") ??
-            request?.headers?.get?.("x-forwarded-for")?.split(",")[0]?.trim() ??
-            null;
           await db
             .update(users)
             .set({ lastLoginAt: new Date() })
