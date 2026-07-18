@@ -21,7 +21,7 @@
 Urutan yang disarankan:
 
 1. [x] **Ganti kata sandi mandiri** — SELESAI 18 Juli. Endpoint `PATCH /me/password` (verifikasi sandi lama, tolak hash argon2 lama dengan pesan jelas, audit log tanpa hash) + halaman `/dashboard/profil` (semua peran) + tombol "Ubah Sandi" di Topbar.
-2. [ ] **Kelengkapan audit log** — baru terpasang di modul kelulusan/kenaikan; tambahkan ke login (isi `last_login_at`), CRUD user, verifikasi jurnal, dan perubahan settings.
+2. [x] **Kelengkapan audit log** — SELESAI 18 Juli. Hasil survey: CRUD user/settings/verifikasi TERNYATA sudah lengkap semua (teachers, students, parents, principals, schools, semesters, academic-years, teacher-student, verifications, journal-templates, evidence-requirements). Yang ditambahkan: login sukses → isi `last_login_at` + baris audit `action: "login"` dengan IP (di `authorize` Auth.js, dibungkus try/catch agar gagal-log tidak menggagalkan login). Sengaja TIDAK di-audit agar log tidak banjir: pengisian jurnal harian siswa, komentar ortu, upload foto, tandai-baca notifikasi.
 3. [ ] **Backup/restore** — minimal dokumentasikan prosedur export via Neon (atau branch snapshot); Free plan punya point-in-time restore terbatas.
 4. [ ] **Hardening** — rate limiting login (Workers), validasi ukuran/jenis file upload foto bukti, review CORS `FRONTEND_ORIGIN`.
 

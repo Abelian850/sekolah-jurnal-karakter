@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq } from "drizzle-orm";
-import { users, roles, teachers, students, principals } from "@sjk/api/src/db/schema";
+import { users, roles, teachers, students, principals, auditLogs } from "@sjk/api/src/db/schema";
 import type { Role } from "@sjk/shared";
 import { verifyPassword } from "@sjk/shared";
 
@@ -78,7 +78,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         email: { label: "Email / NISN / NIP", type: "text" },
         password: { label: "Kata Sandi", type: "password" },
       },
-      authorize: async (credentials) => {
+      authorize: async (credentials, request) => {
         const identifier = credentials?.email as string | undefined;
         const password = credentials?.password as string | undefined;
 
@@ -137,6 +137,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!passwordValid) return null;
 
         const schoolId = await resolveSchoolId(db, row.id, row.roleName as Role);
+
+        // Fase 9 (audit): catat login sukses — isi last_login_at + baris
+        // audit_logs. Dibungkus try/catch agar KEGAGALAN pencatatan tidak
+        // pernah menggagalkan login itu sendiri (mis. saat DB sesaat
+        // menolak write); login tetap sah karena password sudah terverifikasi.
+        try {
+          const ipAddress =
+            request?.headers?.get?.("cf-connecting-ip") ??
+            request?.headers?.get?.("x-forwarded-for")?.split(",")[0]?.trim() ??
+            null;
+          await db
+            .update(users)
+            .set({ lastLoginAt: new Date() })
+            .where(eq(users.id, row.id));
+          await db.insert(auditLogs).values({
+            userId: row.id,
+            action: "login",
+            tableName: "users",
+            recordId: row.id,
+            // Tanpa old/new value: cukup jejak siapa-kapan-dari-IP-mana.
+            ipAddress,
+          });
+        } catch {
+          // Sengaja ditelan - lihat komentar di atas.
+        }
 
         return {
           id: row.id,
