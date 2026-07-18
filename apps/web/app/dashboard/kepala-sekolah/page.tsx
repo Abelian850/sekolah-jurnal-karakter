@@ -3,6 +3,7 @@ import { ROLES } from "@sjk/shared";
 import { Topbar } from "@/components/topbar";
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { getTodayDateWIB, formatDateID } from "@/lib/date";
+import { TopStudentsCard, type TopStudent } from "@/components/top-students-card";
 
 interface AnalyticsSummary {
   date: string;
@@ -60,10 +61,15 @@ export default async function KepalaSekolahDashboardPage() {
 
   const today = getTodayDateWIB();
   let summary: AnalyticsSummary | null = null;
+  let topStudents: TopStudent[] = [];
   let errorMessage: string | null = null;
 
   try {
     summary = await apiFetch<AnalyticsSummary>(`/analytics/summary?date=${today}&days=30`);
+    const top = await apiFetch<{ students: TopStudent[] }>(
+      `/analytics/top-students?date=${today}&days=30&limit=10`
+    );
+    topStudents = top.students;
   } catch (err) {
     errorMessage =
       err instanceof ApiRequestError ? err.message : "Gagal memuat data analitik sekolah.";
@@ -155,6 +161,10 @@ export default async function KepalaSekolahDashboardPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="mb-6">
+        <TopStudentsCard students={topStudents} days={30} />
       </div>
 
       <div className="glass-panel rounded-2xl p-6">

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { and, eq, gte, lte, isNotNull, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, isNotNull, sql, type SQL } from "drizzle-orm";
 import { PERMISSIONS } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
@@ -263,6 +263,126 @@ analyticsRoute.get(
     const schoolId = schoolIdRaw && uuidRe.test(schoolIdRaw) ? schoolIdRaw : null;
 
     const data = await buildSummary(db, schoolId, parsed.dateParam, parsed.days);
+    return c.json({ data });
+  }
+);
+
+/**
+ * Siswa paling rajin mengisi jurnal (rencana kerja 18 Juli — Prioritas 3).
+ * Menghitung jurnal berstatus submitted/approved per siswa aktif dalam
+ * rentang `days` hari berakhir di `date`, urut menurun. Draft & rejected
+ * sengaja tidak dihitung: draft belum dikirim, rejected berarti isinya
+ * tidak sah menurut Guru Wali. Tanpa perubahan skema — unique index
+ * (studentId, journalDate) menjamin maksimal 1 jurnal/siswa/hari.
+ */
+async function buildTopStudents(
+  db: Database,
+  schoolId: string | null,
+  dateParam: string,
+  days: number,
+  limit: number
+) {
+  const asDate = new Date(`${dateParam}T00:00:00Z`);
+  const rangeStart = new Date(asDate.getTime() - (days - 1) * 86400000)
+    .toISOString()
+    .slice(0, 10);
+
+  const rows = await db
+    .select({
+      studentId: students.id,
+      fullName: students.fullName,
+      className: students.className,
+      filled: sql<number>`count(*)::int`,
+    })
+    .from(journals)
+    .innerJoin(students, eq(journals.studentId, students.id))
+    .where(
+      and(
+        inArray(journals.status, ["submitted", "approved"]),
+        gte(journals.journalDate, rangeStart),
+        lte(journals.journalDate, dateParam),
+        eq(students.isActive, true),
+        schoolId ? eq(students.schoolId, schoolId) : undefined
+      )
+    )
+    .groupBy(students.id, students.fullName, students.className)
+    .orderBy(desc(sql`count(*)`), students.fullName)
+    .limit(limit);
+
+  return { date: dateParam, days, schoolId, students: rows };
+}
+
+function parseLimit(c: { req: { query: (k: string) => string | undefined } }): number {
+  const raw = Number(c.req.query("limit") ?? "10");
+  return Number.isInteger(raw) && raw >= 1 && raw <= 50 ? raw : 10;
+}
+
+/**
+ * GET /analytics/top-students?date=YYYY-MM-DD&days=30&limit=10
+ * (Kepala Sekolah). schoolId SELALU dari JWT — pola sama dengan /summary.
+ */
+analyticsRoute.get(
+  "/top-students",
+  authMiddleware,
+  requirePermission(PERMISSIONS.SCHOOL_ANALYTICS_VIEW),
+  async (c) => {
+    const db = c.get("db");
+    const user = c.get("user");
+
+    if (!user.schoolId) {
+      return c.json(
+        {
+          error: "no_school",
+          message: "Akun kepala sekolah belum ditautkan ke sekolah. Hubungi Admin.",
+          statusCode: 422,
+        },
+        422
+      );
+    }
+
+    const parsed = parseDateAndDays(c);
+    if (!parsed) {
+      return c.json(
+        { error: "invalid_date", message: "Parameter date wajib (YYYY-MM-DD)", statusCode: 422 },
+        422
+      );
+    }
+
+    const data = await buildTopStudents(
+      db,
+      user.schoolId,
+      parsed.dateParam,
+      parsed.days,
+      parseLimit(c)
+    );
+    return c.json({ data });
+  }
+);
+
+/**
+ * GET /analytics/admin-top-students?date=YYYY-MM-DD&days=30&limit=10&schoolId=<uuid>
+ * (Admin). Tanpa schoolId = seluruh sekolah — pola sama dengan /admin-summary.
+ */
+analyticsRoute.get(
+  "/admin-top-students",
+  authMiddleware,
+  requirePermission(PERMISSIONS.SCHOOL_MANAGE),
+  async (c) => {
+    const db = c.get("db");
+
+    const parsed = parseDateAndDays(c);
+    if (!parsed) {
+      return c.json(
+        { error: "invalid_date", message: "Parameter date wajib (YYYY-MM-DD)", statusCode: 422 },
+        422
+      );
+    }
+
+    const schoolIdRaw = c.req.query("schoolId");
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const schoolId = schoolIdRaw && uuidRe.test(schoolIdRaw) ? schoolIdRaw : null;
+
+    const data = await buildTopStudents(db, schoolId, parsed.dateParam, parsed.days, parseLimit(c));
     return c.json({ data });
   }
 );

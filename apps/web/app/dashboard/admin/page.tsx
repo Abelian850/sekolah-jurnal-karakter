@@ -1,6 +1,7 @@
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { getTodayDateWIB, formatDateID } from "@/lib/date";
 import { SchoolFilter } from "@/components/school-filter";
+import { TopStudentsCard, type TopStudent } from "@/components/top-students-card";
 
 interface School {
   id: string;
@@ -123,6 +124,7 @@ export default async function AdminOverviewPage({
 
   let schools: School[] = [];
   let summary: AnalyticsSummary | null = null;
+  let topStudents: TopStudent[] = [];
   let errorMessage: string | null = null;
 
   try {
@@ -132,6 +134,10 @@ export default async function AdminOverviewPage({
     summary = await apiFetch<AnalyticsSummary>(
       `/analytics/admin-summary?date=${today}&days=30${query}`
     );
+    const top = await apiFetch<{ students: TopStudent[] }>(
+      `/analytics/admin-top-students?date=${today}&days=30&limit=10${query}`
+    );
+    topStudents = top.students;
   } catch (err) {
     errorMessage =
       err instanceof ApiRequestError ? err.message : "Gagal memuat data ringkasan.";
@@ -242,6 +248,9 @@ export default async function AdminOverviewPage({
           ))}
         </div>
       </div>
+
+      {/* Siswa paling rajin mengisi jurnal */}
+      <TopStudentsCard students={topStudents} days={30} />
 
       {/* Nilai karakter per kelas */}
       <div className="glass-panel rounded-2xl p-6">

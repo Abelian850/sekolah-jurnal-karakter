@@ -23,13 +23,13 @@ Urutan yang disarankan:
 1. [x] **Ganti kata sandi mandiri** — SELESAI 18 Juli. Endpoint `PATCH /me/password` (verifikasi sandi lama, tolak hash argon2 lama dengan pesan jelas, audit log tanpa hash) + halaman `/dashboard/profil` (semua peran) + tombol "Ubah Sandi" di Topbar.
 2. [x] **Kelengkapan audit log** — SELESAI 18 Juli. Hasil survey: CRUD user/settings/verifikasi TERNYATA sudah lengkap semua (teachers, students, parents, principals, schools, semesters, academic-years, teacher-student, verifications, journal-templates, evidence-requirements). Yang ditambahkan: login sukses → isi `last_login_at` + baris audit `action: "login"` dengan IP (di `authorize` Auth.js, dibungkus try/catch agar gagal-log tidak menggagalkan login). Sengaja TIDAK di-audit agar log tidak banjir: pengisian jurnal harian siswa, komentar ortu, upload foto, tandai-baca notifikasi.
 3. [ ] **Backup/restore** — minimal dokumentasikan prosedur export via Neon (atau branch snapshot); Free plan punya point-in-time restore terbatas.
-4. [ ] **Hardening** — rate limiting login (Workers), validasi ukuran/jenis file upload foto bukti, review CORS `FRONTEND_ORIGIN`.
+4. [x] **Hardening** — SELESAI 18 Juli (sesi 2). Rate limiting login berbasis `audit_logs` action `login_failed` (5 gagal/15 mnt per akun, 20/15 mnt per IP; cek SEBELUM verifikasi argon2; fail-open saat DB bermasalah agar tidak mengunci semua orang). Validasi upload TERNYATA sudah ada sejak fitur R2 (MIME jpg/png/webp + maks 5MB di `files.ts`) — tidak perlu perubahan. CORS: ditambah fail-closed bila `FRONTEND_ORIGIN` kosong (sebelumnya default hono/cors = `*`).
 
 ## Prioritas 3 — Fitur baru: siswa paling rajin mengisi jurnal
 
-1. [ ] Endpoint agregasi baru di `apps/api/src/routes/analytics.ts` — misal `GET /analytics/top-students?days=30&limit=10`: hitung jumlah jurnal berstatus `submitted/approved` per siswa dari tabel `journals` (join `students`), urutkan menurun. Tidak perlu perubahan skema.
-2. [ ] Kartu "Siswa Terajin" di dashboard Kepala Sekolah (`apps/web/app/dashboard/kepala-sekolah/page.tsx`) dan Admin — tampilkan nama, kelas, jumlah pengisian.
-3. [ ] Batasi per sekolah (pakai `schoolId` dari JWT, pola sama dengan `GET /analytics/summary`).
+1. [x] SELESAI 18 Juli (sesi 2). `GET /analytics/top-students` (KS, schoolId dari JWT) + `GET /analytics/admin-top-students` (Admin, opsional `?schoolId=`) — hitung jurnal `submitted/approved` per siswa aktif, param `date`/`days`/`limit`, tanpa perubahan skema.
+2. [x] Kartu "Siswa Terajin" (`components/top-students-card.tsx`) tampil di dashboard KS & Admin — peringkat, nama, kelas, jumlah jurnal.
+3. [x] Pembatasan per sekolah mengikuti pola `/summary` & `/admin-summary`.
 4. [ ] Opsional lanjutan: export guru (tombol Export Excel di daftar guru, pola sama `export-students-button.tsx`) dan statistik 7 Kebiasaan paling sering "selesai" dari `journal_items`.
 
 ## Opsional / catatan
