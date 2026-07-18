@@ -23,11 +23,13 @@ Tujuan: Guru Wali bisa mengunduh rekap Excel siswa binaannya per periode.
    hari tanpa jurnal, rata-rata `characterScore` dari `verifications`.
 2. [ ] Opsional sheet kedua: rekap 7 Kebiasaan per siswa (berapa kali tiap
    kebiasaan "selesai") dari `journal_items` — cek dulu bentuk datanya.
-3. [ ] Tombol "Unduh Laporan" di dashboard Guru Wali + pilihan periode
-   (default bulan berjalan). Generate .xlsx DI BROWSER dengan SheetJS —
-   pola persis `components/export-students-button.tsx` (lihat alasan desain
-   di `docs/bulk-import-export.md`; Workers tidak cocok generate file biner).
-4. [ ] Nama file: `laporan-jurnal-<kelas/guru>-<from>_<to>.xlsx`.
+3. [ ] Dua tombol unduh di dashboard Guru Wali + pilihan periode (default
+   bulan berjalan), dari endpoint yang SAMA. Keduanya digenerate DI BROWSER
+   (Workers tidak cocok generate file biner — `docs/bulk-import-export.md`):
+   - **Excel** (.xlsx): SheetJS, pola persis `components/export-students-button.tsx`.
+   - **PDF** (.pdf): jsPDF + jspdf-autotable (dependensi baru, cek ukuran
+     bundle) — tabel rekap + header nama sekolah/kelas/periode/nama guru.
+4. [ ] Nama file: `laporan-jurnal-<kelas/guru>-<from>_<to>.{xlsx,pdf}`.
 5. [ ] Setelah jadi, pertimbangkan tombol serupa untuk KS (rekap satu sekolah)
    — JANGAN dikerjakan sebelum versi Guru Wali dipakai dan terbukti pas.
 
