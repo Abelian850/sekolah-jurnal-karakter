@@ -1,40 +1,53 @@
-# Rencana Kerja — Sabtu, 18 Juli 2026
+# Rencana Kerja — Minggu, 19 Juli 2026
 
-## Konteks (hasil sesi 17 Juli)
+## Konteks (hasil sesi 18 Juli)
 
-- Data contoh dihapus permanen dari database. Tersisa: `roles` (6) + 1 akun admin `admin30@sekolah.com`.
-- Database dimigrasi ke project Neon baru region **Singapore (ap-southeast-1)**, project `delicate-queen-81858224` — mengatasi delay login akibat latensi ke us-east-1.
-- 22 tabel (8 migrasi Drizzle) + tracking `__drizzle_migrations` sudah terpasang di DB baru.
-- `DATABASE_URL` lokal (`apps/api/.dev.vars` & `apps/web/.env.local`) sudah menunjuk DB baru.
-- Project Neon lama (us-east-1) **masih ada** — jangan dihapus sebelum produksi terbukti jalan.
+- Fase 9 hampir tuntas: ganti sandi mandiri, audit login, rate limiting login
+  (berbasis `audit_logs` action `login_failed`), CORS fail-closed. Validasi
+  upload sudah ada sejak fitur R2.
+- Fitur Siswa Terajin selesai: `GET /analytics/top-students` (KS) +
+  `/analytics/admin-top-students` (Admin) + kartu di kedua dashboard.
+- **Dua commit sesi 2 (36a87a0, 5e58945) BELUM ter-push** — sandbox tidak punya
+  kredensial GitHub. Push manual dulu, tunggu CI hijau (typecheck web belum
+  terverifikasi penuh di sandbox), baru cek deploy.
+- `LOGO SPEGALUH.png` di root repo belum di-commit (menunggu keputusan pemakaian).
 
-## Prioritas 1 — Finalisasi migrasi (±15 menit)
+## Prioritas 1 — Fitur baru: Download Laporan untuk Guru Wali
 
-1. [x] Update secret `DATABASE_URL` di GitHub — SELESAI 17 Juli.
-2. [x] Deploy: push `339785f` (Deploy Web #13) + re-run Deploy API #9 sukses — produksi (web & api worker) sudah menunjuk DB Singapore.
-3. [ ] Uji login produksi dengan `admin30@sekolah.com` — bandingkan kecepatannya.
-4. [ ] Uji login lokal (`npm run dev:web` + `dev:api`).
-5. [ ] Setelah semua terbukti jalan: hapus project Neon lama (us-east-1) agar tidak membingungkan.
+Tujuan: Guru Wali bisa mengunduh rekap Excel siswa binaannya per periode.
 
-## Prioritas 2 — Mulai Fase 9 (hardening)
+1. [ ] Endpoint agregasi `GET /analytics/guru-wali-recap?from=YYYY-MM-DD&to=YYYY-MM-DD`
+   (permission `JOURNAL_VERIFY`, scope siswa dari `teacher_student` milik guru
+   di JWT — pola scoping sama dengan daftar siswa Guru Wali). Per siswa:
+   nama, NISN, kelas, jumlah jurnal terkirim/disetujui/ditolak/draft, jumlah
+   hari tanpa jurnal, rata-rata `characterScore` dari `verifications`.
+2. [ ] Opsional sheet kedua: rekap 7 Kebiasaan per siswa (berapa kali tiap
+   kebiasaan "selesai") dari `journal_items` — cek dulu bentuk datanya.
+3. [ ] Tombol "Unduh Laporan" di dashboard Guru Wali + pilihan periode
+   (default bulan berjalan). Generate .xlsx DI BROWSER dengan SheetJS —
+   pola persis `components/export-students-button.tsx` (lihat alasan desain
+   di `docs/bulk-import-export.md`; Workers tidak cocok generate file biner).
+4. [ ] Nama file: `laporan-jurnal-<kelas/guru>-<from>_<to>.xlsx`.
+5. [ ] Setelah jadi, pertimbangkan tombol serupa untuk KS (rekap satu sekolah)
+   — JANGAN dikerjakan sebelum versi Guru Wali dipakai dan terbukti pas.
 
-Urutan yang disarankan:
+## Prioritas 2 — Sisa Fase 9 & verifikasi migrasi (carry-over)
 
-1. [x] **Ganti kata sandi mandiri** — SELESAI 18 Juli. Endpoint `PATCH /me/password` (verifikasi sandi lama, tolak hash argon2 lama dengan pesan jelas, audit log tanpa hash) + halaman `/dashboard/profil` (semua peran) + tombol "Ubah Sandi" di Topbar.
-2. [x] **Kelengkapan audit log** — SELESAI 18 Juli. Hasil survey: CRUD user/settings/verifikasi TERNYATA sudah lengkap semua (teachers, students, parents, principals, schools, semesters, academic-years, teacher-student, verifications, journal-templates, evidence-requirements). Yang ditambahkan: login sukses → isi `last_login_at` + baris audit `action: "login"` dengan IP (di `authorize` Auth.js, dibungkus try/catch agar gagal-log tidak menggagalkan login). Sengaja TIDAK di-audit agar log tidak banjir: pengisian jurnal harian siswa, komentar ortu, upload foto, tandai-baca notifikasi.
-3. [ ] **Backup/restore** — minimal dokumentasikan prosedur export via Neon (atau branch snapshot); Free plan punya point-in-time restore terbatas.
-4. [x] **Hardening** — SELESAI 18 Juli (sesi 2). Rate limiting login berbasis `audit_logs` action `login_failed` (5 gagal/15 mnt per akun, 20/15 mnt per IP; cek SEBELUM verifikasi argon2; fail-open saat DB bermasalah agar tidak mengunci semua orang). Validasi upload TERNYATA sudah ada sejak fitur R2 (MIME jpg/png/webp + maks 5MB di `files.ts`) — tidak perlu perubahan. CORS: ditambah fail-closed bila `FRONTEND_ORIGIN` kosong (sebelumnya default hono/cors = `*`).
+1. [ ] Uji login produksi `admin30@sekolah.com` (bandingkan kecepatan pasca-migrasi Singapore).
+2. [ ] Uji login lokal (`npm run dev:web` + `dev:api`).
+3. [ ] Hapus project Neon lama us-east-1 SETELAH produksi terbukti jalan.
+4. [ ] **Backup/restore** — dokumentasikan prosedur export via Neon (branch
+   snapshot / pg_dump); Free plan punya point-in-time restore terbatas.
 
-## Prioritas 3 — Fitur baru: siswa paling rajin mengisi jurnal
+## Opsional / catatan (carry-over)
 
-1. [x] SELESAI 18 Juli (sesi 2). `GET /analytics/top-students` (KS, schoolId dari JWT) + `GET /analytics/admin-top-students` (Admin, opsional `?schoolId=`) — hitung jurnal `submitted/approved` per siswa aktif, param `date`/`days`/`limit`, tanpa perubahan skema.
-2. [x] Kartu "Siswa Terajin" (`components/top-students-card.tsx`) tampil di dashboard KS & Admin — peringkat, nama, kelas, jumlah jurnal.
-3. [x] Pembatasan per sekolah mengikuti pola `/summary` & `/admin-summary`.
-4. [ ] Opsional lanjutan: export guru (tombol Export Excel di daftar guru, pola sama `export-students-button.tsx`) dan statistik 7 Kebiasaan paling sering "selesai" dari `journal_items`.
-
-## Opsional / catatan
-
-- [ ] Keep-alive ping (Cloudflare cron tiap 4 menit → endpoint health yang menyentuh DB) jika cold start ±1 detik masih mengganggu. Konsekuensi: jatah compute-hours Free terpakai lebih cepat.
-- [ ] Fase 10: perbarui `docs/tutorial-penggunaan.md` (fitur kelulusan/kenaikan & revisi 11 Juli belum terdokumentasi).
+- [ ] Export guru (Excel, pola `export-students-button.tsx`).
+- [ ] Statistik 7 Kebiasaan paling sering "selesai" dari `journal_items` (kartu KS/Admin).
+- [ ] Keep-alive ping (cron 4 menit → health endpoint) jika cold start masih mengganggu.
+- [ ] Fase 10: perbarui `docs/tutorial-penggunaan.md` (kelulusan/kenaikan, revisi 11 Juli,
+  fitur 18 Juli: ganti sandi, siswa terajin, rate limiting, laporan Guru Wali).
 - [ ] Opsional landing: pakai `schools.logoUrl` agar logo tidak hardcode.
-- Status proyek: Fase 1–8 selesai, sisa Fase 9–10 (±15–20%).
+- Catatan rate limiting: akun terkunci melihat pesan "kredensial salah" generik —
+  kalau ada keluhan siswa bingung, pertimbangkan pesan khusus (trade-off: memberi
+  sinyal ke penyerang).
+- Status proyek: Fase 1–8 selesai; Fase 9 tinggal backup/restore; sisa Fase 10 (±10–15%).
