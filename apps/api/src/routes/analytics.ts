@@ -6,7 +6,11 @@ import { requirePermission } from "../middleware/rbac";
 import {
   students,
   teachers,
+  teacherStudent,
+  schools,
   journals,
+  journalItems,
+  journalTemplateItems,
   verifications,
 } from "../db/schema";
 import type { Database } from "../db/client";
@@ -384,5 +388,213 @@ analyticsRoute.get(
 
     const data = await buildTopStudents(db, schoolId, parsed.dateParam, parsed.days, parseLimit(c));
     return c.json({ data });
+  }
+);
+
+/**
+ * GET /analytics/guru-wali-recap?from=YYYY-MM-DD&to=YYYY-MM-DD
+ * (Guru Wali — rencana kerja 19 Juli, Prioritas 1).
+ *
+ * Rekap per siswa binaan AKTIF guru yang sedang login, untuk diunduh
+ * sebagai Excel/PDF DI BROWSER (Workers tidak menggenerate file biner —
+ * docs/bulk-import-export.md). Scoping identik dengan verifications.ts:
+ * identitas guru diturunkan dari JWT (users.id -> teachers.userId), siswa
+ * dibatasi lewat teacher_student.isActive — bukan dari parameter klien.
+ *
+ * Isi respons:
+ * - meta        : nama sekolah, nama guru, periode, jumlah hari
+ * - students    : per siswa — jumlah jurnal per status (draft/submitted/
+ *                 approved/rejected), hari tanpa jurnal (totalDays dikurangi
+ *                 seluruh jurnal; unique index (studentId, journalDate)
+ *                 menjamin 1 jurnal/hari), rata-rata characterScore
+ * - habits      : daftar 7 Kebiasaan (dari journal_template_items yang
+ *                 muncul pada jurnal periode ini), urut orderIndex
+ * - habitCounts : berapa kali tiap kebiasaan "selesai" per siswa. Hanya
+ *                 jurnal submitted/approved yang dihitung — draft belum
+ *                 dikirim, rejected berarti isinya tidak sah (rasional
+ *                 sama dengan Siswa Terajin).
+ */
+analyticsRoute.get(
+  "/guru-wali-recap",
+  authMiddleware,
+  requirePermission(PERMISSIONS.JOURNAL_VERIFY),
+  async (c) => {
+    const db = c.get("db");
+    const user = c.get("user");
+
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    const from = c.req.query("from");
+    const to = c.req.query("to");
+    if (!from || !to || !dateRe.test(from) || !dateRe.test(to) || from > to) {
+      return c.json(
+        {
+          error: "invalid_range",
+          message: "Parameter from & to wajib (YYYY-MM-DD) dan from <= to",
+          statusCode: 422,
+        },
+        422
+      );
+    }
+    const totalDays =
+      Math.round(
+        (new Date(`${to}T00:00:00Z`).getTime() - new Date(`${from}T00:00:00Z`).getTime()) /
+          86400000
+      ) + 1;
+    if (totalDays > 366) {
+      return c.json(
+        { error: "invalid_range", message: "Periode maksimal 366 hari", statusCode: 422 },
+        422
+      );
+    }
+
+    const [teacherRow] = await db
+      .select({ id: teachers.id, fullName: teachers.fullName, schoolName: schools.name })
+      .from(teachers)
+      .innerJoin(schools, eq(teachers.schoolId, schools.id))
+      .where(eq(teachers.userId, user.sub));
+    if (!teacherRow) {
+      return c.json(
+        {
+          error: "not_found",
+          message: "Profil guru untuk akun ini tidak ditemukan. Hubungi Admin sekolah.",
+          statusCode: 404,
+        },
+        404
+      );
+    }
+
+    // Filter binaan aktif yang sama untuk semua query di bawah.
+    const binaanJoin = and(
+      eq(teacherStudent.studentId, journals.studentId),
+      eq(teacherStudent.teacherId, teacherRow.id),
+      eq(teacherStudent.isActive, true)
+    );
+    const rangeFilter = and(gte(journals.journalDate, from), lte(journals.journalDate, to));
+
+    // ---- Daftar siswa binaan aktif ----
+    const studentRows = await db
+      .select({
+        studentId: students.id,
+        fullName: students.fullName,
+        nisn: students.nisn,
+        className: students.className,
+      })
+      .from(teacherStudent)
+      .innerJoin(students, eq(teacherStudent.studentId, students.id))
+      .where(
+        and(
+          eq(teacherStudent.teacherId, teacherRow.id),
+          eq(teacherStudent.isActive, true),
+          eq(students.isActive, true)
+        )
+      )
+      .orderBy(students.className, students.fullName);
+
+    // ---- Jumlah jurnal per status per siswa ----
+    const statusRows = await db
+      .select({
+        studentId: journals.studentId,
+        status: journals.status,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(journals)
+      .innerJoin(teacherStudent, binaanJoin)
+      .where(rangeFilter)
+      .groupBy(journals.studentId, journals.status);
+
+    // ---- Rata-rata nilai karakter per siswa ----
+    const scoreRows = await db
+      .select({
+        studentId: journals.studentId,
+        avgScore: sql<number>`round(avg(${verifications.characterScore}))::int`,
+      })
+      .from(verifications)
+      .innerJoin(journals, eq(verifications.journalId, journals.id))
+      .innerJoin(teacherStudent, binaanJoin)
+      .where(and(isNotNull(verifications.characterScore), rangeFilter))
+      .groupBy(journals.studentId);
+
+    // ---- 7 Kebiasaan "selesai" per siswa (hanya jurnal terkirim/disetujui) ----
+    const habitRows = await db
+      .select({
+        studentId: journals.studentId,
+        templateItemId: journalItems.templateItemId,
+        itemName: journalTemplateItems.itemName,
+        orderIndex: journalTemplateItems.orderIndex,
+        selesai: sql<number>`count(*) filter (where ${journalItems.status} = 'selesai')::int`,
+      })
+      .from(journalItems)
+      .innerJoin(journals, eq(journalItems.journalId, journals.id))
+      .innerJoin(
+        journalTemplateItems,
+        eq(journalItems.templateItemId, journalTemplateItems.id)
+      )
+      .innerJoin(teacherStudent, binaanJoin)
+      .where(and(inArray(journals.status, ["submitted", "approved"]), rangeFilter))
+      .groupBy(
+        journals.studentId,
+        journalItems.templateItemId,
+        journalTemplateItems.itemName,
+        journalTemplateItems.orderIndex
+      );
+
+    const statusMap = new Map<string, Record<string, number>>();
+    for (const r of statusRows) {
+      const entry = statusMap.get(r.studentId) ?? {};
+      entry[r.status] = r.count;
+      statusMap.set(r.studentId, entry);
+    }
+    const scoreMap = new Map(scoreRows.map((r) => [r.studentId, r.avgScore]));
+
+    const studentsOut = studentRows.map((s) => {
+      const st = statusMap.get(s.studentId) ?? {};
+      const draft = st.draft ?? 0;
+      const submitted = st.submitted ?? 0;
+      const approved = st.approved ?? 0;
+      const rejected = st.rejected ?? 0;
+      return {
+        ...s,
+        draft,
+        submitted,
+        approved,
+        rejected,
+        daysWithoutJournal: Math.max(totalDays - (draft + submitted + approved + rejected), 0),
+        avgScore: scoreMap.get(s.studentId) ?? null,
+      };
+    });
+
+    // Daftar kebiasaan unik yang muncul di periode ini, urut orderIndex.
+    const habitMap = new Map<string, { templateItemId: string; itemName: string; orderIndex: number }>();
+    for (const r of habitRows) {
+      if (!habitMap.has(r.templateItemId)) {
+        habitMap.set(r.templateItemId, {
+          templateItemId: r.templateItemId,
+          itemName: r.itemName,
+          orderIndex: r.orderIndex,
+        });
+      }
+    }
+    const habits = [...habitMap.values()].sort(
+      (a, b) => a.orderIndex - b.orderIndex || a.itemName.localeCompare(b.itemName)
+    );
+
+    return c.json({
+      data: {
+        meta: {
+          schoolName: teacherRow.schoolName,
+          teacherName: teacherRow.fullName,
+          from,
+          to,
+          totalDays,
+        },
+        students: studentsOut,
+        habits,
+        habitCounts: habitRows.map((r) => ({
+          studentId: r.studentId,
+          templateItemId: r.templateItemId,
+          selesai: r.selesai,
+        })),
+      },
+    });
   }
 );

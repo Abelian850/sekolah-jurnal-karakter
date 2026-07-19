@@ -3,6 +3,7 @@ import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { formatDateID, getTodayDateWIB } from "@/lib/date";
 import { StatusCalendar, CalendarLegend, type CalendarMark } from "@/components/status-calendar";
 import { StatCard, Bar } from "@/components/stat-widgets";
+import { DownloadGuruWaliReport } from "@/components/download-guru-wali-report";
 
 interface PendingJournal {
   id: string;
@@ -170,6 +171,10 @@ export default async function GuruWaliDashboardPage({
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <DownloadGuruWaliReport />
       </div>
 
       <div className="glass-panel rounded-2xl p-6">
