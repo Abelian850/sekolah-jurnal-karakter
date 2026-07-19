@@ -92,14 +92,15 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
   }
 
   /**
-   * Kirim bertahap per 5 baris. Satu baris impor memakan 6-8 subrequest di
-   * API (cek NISN, cek user yatim, role, insert user, insert student, audit
-   * log), dan Workers paket gratis membatasi 50 subrequest per invocation -
-   * terbukti saat impor 759 baris: baris ke-11 dst mati dengan error
-   * "Too many subrequests". 5 x 8 = 40 menyisakan ruang aman.
-   * Chunk yang gagal dicatat sebagai baris gagal tanpa menghentikan sisanya.
+   * SATU baris per request. Bukan pilihan gaya: hashing PBKDF2 100k iterasi
+   * makan 30-100ms CPU per akun, sedangkan Workers paket gratis hanya
+   * memberi 10ms CPU per invocation (ditegakkan longgar). Chunk berisi 5
+   * baris = 5 hash = ratusan ms CPU dan terbukti dimatikan Cloudflare
+   * berulang kali saat impor 759 murid. Satu hash per invocation setara
+   * beban login biasa yang terbukti selalu lolos. Kalau proyek pindah ke
+   * Workers Paid (30 detik CPU), angka ini aman dinaikkan ke 25-40.
    */
-  const CHUNK_SIZE = 5;
+  const CHUNK_SIZE = 1;
 
   async function handleSubmit() {
     setSubmitting(true);
