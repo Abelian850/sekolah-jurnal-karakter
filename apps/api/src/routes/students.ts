@@ -185,37 +185,65 @@ studentsRoute.post(
           continue;
         }
 
+        // Impor sebelumnya bisa meninggalkan "user yatim": baris users sudah
+        // dibuat tapi insert students-nya gagal (mis. kena limit subrequest
+        // Workers). Email unik, jadi createUserAccount akan bentrok selamanya.
+        // Deteksi & hapus user yatim dulu agar impor ulang bisa jalan.
+        const email = nisnToEmail(row.nisn);
+        const [existingUser] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.email, email));
+        if (existingUser) {
+          const [profile] = await db
+            .select({ id: students.id })
+            .from(students)
+            .where(eq(students.userId, existingUser.id));
+          if (profile) {
+            results.push({ row: i + 1, success: false, message: `NISN ${row.nisn} sudah terdaftar` });
+            continue;
+          }
+          await deleteUserAccount(db, existingUser.id);
+        }
+
         const user = await createUserAccount(db, {
-          email: nisnToEmail(row.nisn),
+          email,
           plainPassword: row.nisn,
           roleName: "peserta_didik",
         });
 
-        const [student] = await db
-          .insert(students)
-          .values({
-            userId: user.id,
-            schoolId,
-            nis: row.nis,
-            nisn: row.nisn,
-            fullName: row.fullName,
-            className: row.className,
-            gradeLevel: row.gradeLevel?.trim() || classNameToGradeLevel(row.className),
-            gender: row.gender,
-            birthDate: row.birthDate,
-          })
-          .returning();
+        try {
+          const [student] = await db
+            .insert(students)
+            .values({
+              userId: user.id,
+              schoolId,
+              nis: row.nis,
+              nisn: row.nisn,
+              fullName: row.fullName,
+              className: row.className,
+              gradeLevel: row.gradeLevel?.trim() || classNameToGradeLevel(row.className),
+              gender: row.gender,
+              birthDate: row.birthDate,
+            })
+            .returning();
 
-        await db.insert(auditLogs).values({
-          userId: admin.sub,
-          action: "create",
-          tableName: "students",
-          recordId: student.id,
-          newValue: student,
-          ipAddress: c.req.header("cf-connecting-ip") ?? null,
-        });
+          await db.insert(auditLogs).values({
+            userId: admin.sub,
+            action: "create",
+            tableName: "students",
+            recordId: student.id,
+            newValue: student,
+            ipAddress: c.req.header("cf-connecting-ip") ?? null,
+          });
 
-        results.push({ row: i + 1, success: true });
+          results.push({ row: i + 1, success: true });
+        } catch (err) {
+          // Kompensasi manual (tidak ada transaksi di driver HTTP Neon):
+          // jangan tinggalkan user yatim untuk percobaan berikutnya.
+          await deleteUserAccount(db, user.id).catch(() => {});
+          throw err;
+        }
       } catch (err) {
         results.push({ row: i + 1, success: false, message: (err as Error).message });
       }

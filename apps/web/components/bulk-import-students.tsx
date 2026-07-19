@@ -92,13 +92,14 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
   }
 
   /**
-   * Kirim bertahap per 40 baris. Satu baris impor memakan ~5 subrequest di
-   * API (cek NISN, role, insert user, insert student, audit log), sedangkan
-   * Cloudflare Workers membatasi subrequest per invocation - mengirim
-   * ratusan baris sekaligus membuat request API mati di tengah jalan.
+   * Kirim bertahap per 5 baris. Satu baris impor memakan 6-8 subrequest di
+   * API (cek NISN, cek user yatim, role, insert user, insert student, audit
+   * log), dan Workers paket gratis membatasi 50 subrequest per invocation -
+   * terbukti saat impor 759 baris: baris ke-11 dst mati dengan error
+   * "Too many subrequests". 5 x 8 = 40 menyisakan ruang aman.
    * Chunk yang gagal dicatat sebagai baris gagal tanpa menghentikan sisanya.
    */
-  const CHUNK_SIZE = 40;
+  const CHUNK_SIZE = 5;
 
   async function handleSubmit() {
     setSubmitting(true);
