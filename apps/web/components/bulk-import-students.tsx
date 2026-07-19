@@ -107,20 +107,36 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
     setResults(null);
     const all: BulkImportResult[] = [];
     try {
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+      // Ratusan request beruntun sesekali ditolak sementara (throttling
+      // Neon/Workers paket gratis). Retry per chunk dengan jeda menaik
+      // menyembuhkan hampir semua kegagalan sementara ini; impor aman
+      // diulang karena baris yang sudah masuk hanya lapor "sudah terdaftar".
+      const MAX_ATTEMPTS = 3;
       for (let start = 0; start < rows.length; start += CHUNK_SIZE) {
         const chunk = rows.slice(start, start + CHUNK_SIZE);
-        try {
-          const result = await bulkImportStudents(schoolId, chunk);
-          // Nomor baris dari API relatif terhadap chunk - geser ke absolut.
-          for (const r of result) all.push({ ...r, row: start + r.row });
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : "kesalahan tidak dikenal";
+        let lastError = "kesalahan tidak dikenal";
+        let done = false;
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS && !done; attempt++) {
+          try {
+            const result = await bulkImportStudents(schoolId, chunk);
+            // Nomor baris dari API relatif terhadap chunk - geser ke absolut.
+            for (const r of result) all.push({ ...r, row: start + r.row });
+            done = true;
+          } catch (err) {
+            lastError = err instanceof Error ? err.message : "kesalahan tidak dikenal";
+            if (attempt < MAX_ATTEMPTS) await sleep(1500 * attempt);
+          }
+        }
+        if (!done) {
           for (let i = 0; i < chunk.length; i++) {
-            all.push({ row: start + i + 1, success: false, message: `Chunk gagal: ${msg}` });
+            all.push({ row: start + i + 1, success: false, message: `Chunk gagal 3x: ${lastError}` });
           }
         }
         // Perbarui progres di layar setelah tiap chunk selesai.
         setResults([...all]);
+        // Jeda kecil antar chunk agar tidak memicu throttling.
+        await sleep(300);
       }
     } finally {
       setSubmitting(false);
