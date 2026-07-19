@@ -91,18 +91,36 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
     reader.readAsArrayBuffer(file);
   }
 
+  /**
+   * Kirim bertahap per 40 baris. Satu baris impor memakan ~5 subrequest di
+   * API (cek NISN, role, insert user, insert student, audit log), sedangkan
+   * Cloudflare Workers membatasi subrequest per invocation - mengirim
+   * ratusan baris sekaligus membuat request API mati di tengah jalan.
+   * Chunk yang gagal dicatat sebagai baris gagal tanpa menghentikan sisanya.
+   */
+  const CHUNK_SIZE = 40;
+
   async function handleSubmit() {
     setSubmitting(true);
     setParseError(null);
+    setResults(null);
+    const all: BulkImportResult[] = [];
     try {
-      const result = await bulkImportStudents(schoolId, rows);
-      setResults(result);
-    } catch (err) {
-      // Tanpa catch, kegagalan request (mis. validasi 400) ditelan diam-diam
-      // dan admin mengira tidak terjadi apa-apa.
-      setParseError(
-        `Impor gagal terkirim: ${err instanceof Error ? err.message : "kesalahan tidak dikenal"}`
-      );
+      for (let start = 0; start < rows.length; start += CHUNK_SIZE) {
+        const chunk = rows.slice(start, start + CHUNK_SIZE);
+        try {
+          const result = await bulkImportStudents(schoolId, chunk);
+          // Nomor baris dari API relatif terhadap chunk - geser ke absolut.
+          for (const r of result) all.push({ ...r, row: start + r.row });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "kesalahan tidak dikenal";
+          for (let i = 0; i < chunk.length; i++) {
+            all.push({ row: start + i + 1, success: false, message: `Chunk gagal: ${msg}` });
+          }
+        }
+        // Perbarui progres di layar setelah tiap chunk selesai.
+        setResults([...all]);
+      }
     } finally {
       setSubmitting(false);
     }
