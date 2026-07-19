@@ -1,37 +1,31 @@
-# Rencana Kerja — Minggu, 19 Juli 2026
+# Rencana Kerja — sesi berikutnya (per 19 Juli 2026)
 
-## Konteks (hasil sesi 18 Juli)
+## Konteks (hasil sesi 19 Juli)
 
-- Fase 9 hampir tuntas: ganti sandi mandiri, audit login, rate limiting login
-  (berbasis `audit_logs` action `login_failed`), CORS fail-closed. Validasi
-  upload sudah ada sejak fitur R2.
-- Fitur Siswa Terajin selesai: `GET /analytics/top-students` (KS) +
-  `/analytics/admin-top-students` (Admin) + kartu di kedua dashboard.
-- **Dua commit sesi 2 (36a87a0, 5e58945) BELUM ter-push** — sandbox tidak punya
-  kredensial GitHub. Push manual dulu, tunggu CI hijau (typecheck web belum
-  terverifikasi penuh di sandbox), baru cek deploy.
+- **Laporan Guru Wali SELESAI** (commit 5badbff): endpoint
+  `GET /analytics/guru-wali-recap?from&to` + panel "Unduh Laporan" di
+  dashboard Guru Wali (pilih bulan, tombol Excel via SheetJS + PDF via
+  jsPDF/autotable dynamic import). Rekap 7 Kebiasaan ikut (sheet 2 /
+  tabel 2), hanya menghitung jurnal submitted/approved. Dependensi baru
+  apps/web: jspdf ^3.0.4, jspdf-autotable ^5.0.8.
+- **BELUM ter-push: 36a87a0, 5e58945 (sesi 18/7) + 5badbff + commit docs ini**
+  — sandbox tetap tanpa kredensial GitHub. Push manual, tunggu CI hijau,
+  baru cek deploy. Typecheck api+web & eslint file terdampak SUDAH lolos
+  di sandbox (tsconfig.sandbox.json).
+- [ ] **UJI MANUAL laporan Guru Wali** setelah deploy: login guru wali,
+  unduh Excel & PDF bulan berjalan, cek angka vs dashboard. Belum diuji
+  end-to-end (sandbox tidak menjalankan server).
+- Catatan sandbox: OneDrive mengunci file `.git` (warning "unable to
+  unlink ... .lock") — jika git menolak operasi berikutnya, hapus manual
+  `.git/HEAD.lock`, `.git/index.lock`, `.git/objects/maintenance.lock`.
 - `LOGO SPEGALUH.png` di root repo belum di-commit (menunggu keputusan pemakaian).
 
-## Prioritas 1 — Fitur baru: Download Laporan untuk Guru Wali
+## Prioritas 1 — Tindak lanjut laporan Guru Wali
 
-Tujuan: Guru Wali bisa mengunduh rekap Excel siswa binaannya per periode.
-
-1. [ ] Endpoint agregasi `GET /analytics/guru-wali-recap?from=YYYY-MM-DD&to=YYYY-MM-DD`
-   (permission `JOURNAL_VERIFY`, scope siswa dari `teacher_student` milik guru
-   di JWT — pola scoping sama dengan daftar siswa Guru Wali). Per siswa:
-   nama, NISN, kelas, jumlah jurnal terkirim/disetujui/ditolak/draft, jumlah
-   hari tanpa jurnal, rata-rata `characterScore` dari `verifications`.
-2. [ ] Opsional sheet kedua: rekap 7 Kebiasaan per siswa (berapa kali tiap
-   kebiasaan "selesai") dari `journal_items` — cek dulu bentuk datanya.
-3. [ ] Dua tombol unduh di dashboard Guru Wali + pilihan periode (default
-   bulan berjalan), dari endpoint yang SAMA. Keduanya digenerate DI BROWSER
-   (Workers tidak cocok generate file biner — `docs/bulk-import-export.md`):
-   - **Excel** (.xlsx): SheetJS, pola persis `components/export-students-button.tsx`.
-   - **PDF** (.pdf): jsPDF + jspdf-autotable (dependensi baru, cek ukuran
-     bundle) — tabel rekap + header nama sekolah/kelas/periode/nama guru.
-4. [ ] Nama file: `laporan-jurnal-<kelas/guru>-<from>_<to>.{xlsx,pdf}`.
-5. [ ] Setelah jadi, pertimbangkan tombol serupa untuk KS (rekap satu sekolah)
-   — JANGAN dikerjakan sebelum versi Guru Wali dipakai dan terbukti pas.
+1. [ ] Uji manual (lihat atas). Perhatikan PDF bila siswa binaan > ±35
+   (pecah halaman autotable) dan nama kebiasaan panjang di header tabel.
+2. [ ] Setelah versi Guru Wali dipakai dan terbukti pas, baru pertimbangkan
+   tombol serupa untuk KS (rekap satu sekolah).
 
 ## Prioritas 2 — Sisa Fase 9 & verifikasi migrasi (carry-over)
 
