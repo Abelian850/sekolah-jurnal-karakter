@@ -156,7 +156,10 @@ export const students = pgTable(
     schoolId: uuid("school_id")
       .notNull()
       .references(() => schools.id, { onDelete: "cascade" }),
-    nis: varchar("nis", { length: 30 }).notNull(),
+    // NIS (nomor induk internal sekolah) opsional sejak revisi Juli 2026 -
+    // identitas utama siswa adalah NISN. String kosong harus dinormalisasi
+    // ke NULL sebelum insert agar unique index (schoolId, nis) tidak bentrok.
+    nis: varchar("nis", { length: 30 }),
     nisn: varchar("nisn", { length: 30 }),
     fullName: varchar("full_name", { length: 255 }).notNull(),
     // className adalah ATRIBUT siswa, bukan foreign key ke guru mana pun.

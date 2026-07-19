@@ -19,6 +19,7 @@ import {
  * Format kolom Excel yang diharapkan (baris pertama = header):
  * nis | nisn | fullName | className | gradeLevel | gender | birthDate
  * (email & password tidak ada lagi - akun dibuat otomatis, login = NISN;
+ * nis opsional sejak revisi Juli 2026 - identitas utama adalah NISN;
  * gradeLevel opsional - jika kosong diturunkan dari kata pertama className)
  */
 export function BulkImportStudents({ schools }: { schools: { id: string; name: string }[] }) {
@@ -68,7 +69,7 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
         // Excel sering membaca NIS/NISN sebagai angka - normalisasi ke string
         // agar tidak ditolak validasi backend.
         const parsed: StudentImportRow[] = raw.map((r) => ({
-          nis: String(r.nis ?? "").trim(),
+          nis: String(r.nis ?? "").trim() || undefined,
           nisn: String(r.nisn ?? "").trim(),
           fullName: String(r.fullName ?? "").trim(),
           className: String(r.className ?? "").trim(),
@@ -92,9 +93,16 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
 
   async function handleSubmit() {
     setSubmitting(true);
+    setParseError(null);
     try {
       const result = await bulkImportStudents(schoolId, rows);
       setResults(result);
+    } catch (err) {
+      // Tanpa catch, kegagalan request (mis. validasi 400) ditelan diam-diam
+      // dan admin mengira tidak terjadi apa-apa.
+      setParseError(
+        `Impor gagal terkirim: ${err instanceof Error ? err.message : "kesalahan tidak dikenal"}`
+      );
     } finally {
       setSubmitting(false);
     }

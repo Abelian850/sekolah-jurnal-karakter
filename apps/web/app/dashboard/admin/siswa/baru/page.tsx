@@ -13,7 +13,8 @@ async function createStudent(formData: FormData) {
     method: "POST",
     body: JSON.stringify({
       schoolId: formData.get("schoolId"),
-      nis: formData.get("nis"),
+      // NIS opsional - string kosong jangan dikirim agar lolos validasi API.
+      nis: formData.get("nis") || undefined,
       nisn: formData.get("nisn"),
       fullName: formData.get("fullName"),
       className: formData.get("className"),
@@ -62,10 +63,9 @@ export default async function SiswaBaruPage() {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="mb-1 block text-sm font-medium">NIS</label>
+            <label className="mb-1 block text-sm font-medium">NIS (opsional)</label>
             <input
               name="nis"
-              required
               className="w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80"
             />
           </div>

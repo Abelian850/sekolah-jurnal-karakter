@@ -7,7 +7,8 @@ import { apiFetch } from "@/lib/api-client";
  * dibuat otomatis oleh API dengan username & kata sandi awal = NISN.
  */
 export interface StudentImportRow {
-  nis: string;
+  /** Opsional sejak revisi Juli 2026 - identitas utama siswa adalah NISN. */
+  nis?: string;
   nisn: string;
   fullName: string;
   className: string;

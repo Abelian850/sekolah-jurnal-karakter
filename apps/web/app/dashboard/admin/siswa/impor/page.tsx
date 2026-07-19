@@ -13,8 +13,8 @@ export default async function SiswaImporPage() {
     <div className="glass-panel max-w-2xl rounded-2xl p-6">
       <h1 className="mb-1 text-xl font-semibold">Impor Peserta Didik dari Excel</h1>
       <p className="mb-4 text-sm text-slate-500">
-        Kolom yang dibutuhkan: <code>nis, nisn, fullName, className</code>; opsional:
-        <code> gradeLevel, gender, birthDate</code>. Baris pertama harus berisi nama kolom ini
+        Kolom yang dibutuhkan: <code>nisn, fullName, className</code>; opsional:
+        <code> nis, gradeLevel, gender, birthDate</code>. Baris pertama harus berisi nama kolom ini
         persis. Jika <code>gradeLevel</code> kosong, angkatan diambil otomatis dari kata pertama
         kelas (&quot;IX A&quot; &rarr; &quot;IX&quot;).
       </p>

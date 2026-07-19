@@ -40,3 +40,9 @@ drizzle/meta/_journal.json.bak
 # TypeScript incremental build & tsconfig sandbox (artefak typecheck lokal/CI)
 *.tsbuildinfo
 tsconfig.sandbox.json
+
+# File Excel berisi data pribadi siswa - JANGAN PERNAH di-commit ke repo
+# publik (nama, NISN = data pribadi anak). Template xlsx di docs/templates/
+# tetap boleh karena hanya berisi contoh fiktif.
+/*.xlsx
+drizzle/meta/*.bak

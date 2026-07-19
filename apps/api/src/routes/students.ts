@@ -18,7 +18,14 @@ export const studentsRoute = new Hono<{ Bindings: Env; Variables: Variables }>()
  * - Kata sandi awal = NISN (dapat direset ulang via PATCH /:id/reset-password).
  */
 const studentFields = {
-  nis: z.string().min(1).max(30),
+  // Opsional sejak revisi Juli 2026: NIS internal sekolah boleh kosong,
+  // identitas utama adalah NISN. "" dinormalisasi ke undefined agar unique
+  // index (schoolId, nis) di Postgres tidak bentrok antar string kosong.
+  nis: z
+    .string()
+    .max(30)
+    .optional()
+    .transform((v) => v?.trim() || undefined),
   nisn: z.string().regex(NISN_REGEX, "NISN harus berupa 5-30 digit angka"),
   fullName: z.string().min(3).max(255),
   className: z.string().min(1).max(20),
