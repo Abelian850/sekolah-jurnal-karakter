@@ -10,6 +10,9 @@ declare module "next-auth" {
     user: {
       id: string;
       email: string;
+      // fullName dari tabel profil (teachers/students/principals),
+      // diisi saat login. null untuk admin / sesi lama pra-fitur ini.
+      name: string | null;
       role: Role;
       schoolId: string | null;
     };
@@ -18,6 +21,7 @@ declare module "next-auth" {
   interface User {
     id: string;
     email: string;
+    name: string | null;
     role: Role;
     schoolId: string | null;
   }

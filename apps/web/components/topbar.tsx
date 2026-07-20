@@ -8,14 +8,18 @@ import { auth, signOut } from "@/lib/auth";
 export async function Topbar() {
   const session = await auth();
   const email = session?.user?.email ?? "";
+  // Nama diisi saat login dari tabel profil (teachers/students/principals).
+  // Fallback ke email untuk admin (tanpa profil) atau sesi lama yang
+  // JWT-nya belum memuat name (perlu login ulang agar terisi).
+  const displayName = session?.user?.name || email;
   const role = session?.user?.role?.replace("_", " ") ?? "";
-  const initial = (email[0] ?? "?").toUpperCase();
+  const initial = (displayName[0] ?? "?").toUpperCase();
 
   return (
     <header className="glass-panel mb-6 flex items-center justify-between gap-4 rounded-2xl px-6 py-3">
       <div className="min-w-0">
         <p className="text-xs text-slate-500">Selamat datang 👋</p>
-        <p className="truncate text-sm font-semibold">{email}</p>
+        <p className="truncate text-sm font-semibold">{displayName}</p>
       </div>
       <div className="flex shrink-0 items-center gap-3">
         <div className="flex items-center gap-2.5">

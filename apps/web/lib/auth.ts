@@ -19,37 +19,40 @@ import { verifyPassword } from "@sjk/shared";
  * (userId -> schoolId) sehingga schoolId-nya ikut terisi di JWT dan
  * endpoint analytics dapat membatasi data per sekolah. Admin tetap
  * lintas sekolah (null).
+ * Revisi Juli 2026: sekalian mengambil fullName dari tabel profil agar
+ * UI (topbar) bisa menyapa dengan nama, bukan email internal. Admin
+ * tidak punya tabel profil - fullName null, UI fallback ke email.
  */
-async function resolveSchoolId(
+async function resolveProfile(
   db: ReturnType<typeof drizzle>,
   userId: string,
   role: Role
-): Promise<string | null> {
+): Promise<{ schoolId: string | null; fullName: string | null }> {
   if (role === "guru_wali" || role === "guru") {
     const [row] = await db
-      .select({ schoolId: teachers.schoolId })
+      .select({ schoolId: teachers.schoolId, fullName: teachers.fullName })
       .from(teachers)
       .where(eq(teachers.userId, userId))
       .limit(1);
-    return row?.schoolId ?? null;
+    return { schoolId: row?.schoolId ?? null, fullName: row?.fullName ?? null };
   }
   if (role === "peserta_didik") {
     const [row] = await db
-      .select({ schoolId: students.schoolId })
+      .select({ schoolId: students.schoolId, fullName: students.fullName })
       .from(students)
       .where(eq(students.userId, userId))
       .limit(1);
-    return row?.schoolId ?? null;
+    return { schoolId: row?.schoolId ?? null, fullName: row?.fullName ?? null };
   }
   if (role === "kepala_sekolah") {
     const [row] = await db
-      .select({ schoolId: principals.schoolId })
+      .select({ schoolId: principals.schoolId, fullName: principals.fullName })
       .from(principals)
       .where(eq(principals.userId, userId))
       .limit(1);
-    return row?.schoolId ?? null;
+    return { schoolId: row?.schoolId ?? null, fullName: row?.fullName ?? null };
   }
-  return null;
+  return { schoolId: null, fullName: null };
 }
 
 /**
@@ -228,7 +231,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        const schoolId = await resolveSchoolId(db, row.id, row.roleName as Role);
+        const { schoolId, fullName } = await resolveProfile(
+          db,
+          row.id,
+          row.roleName as Role
+        );
 
         // Fase 9 (audit): catat login sukses — isi last_login_at + baris
         // audit_logs. Dibungkus try/catch agar KEGAGALAN pencatatan tidak
@@ -254,6 +261,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return {
           id: row.id,
           email: row.email,
+          // Auth.js otomatis menyalin `name` ke token.name -> session.user.name.
+          name: fullName,
           role: row.roleName as Role,
           schoolId,
         };
