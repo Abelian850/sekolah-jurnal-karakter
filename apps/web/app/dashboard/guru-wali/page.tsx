@@ -15,6 +15,14 @@ interface PendingJournal {
   className: string;
 }
 
+interface BinaanStudent {
+  id: string;
+  fullName: string;
+  className: string;
+  nis: string | null;
+  journalStatus: "draft" | "submitted" | "approved" | "rejected" | null;
+}
+
 interface GuruWaliStats {
   date: string;
   month: string;
@@ -60,6 +68,33 @@ function buildMarks(calendar: GuruWaliStats["calendar"]): Record<string, Calenda
   return marks;
 }
 
+/** Label + warna badge status jurnal hari ini per siswa binaan. */
+const STUDENT_STATUS_BADGE: Record<
+  NonNullable<BinaanStudent["journalStatus"]> | "none",
+  { label: string; colorClass: string }
+> = {
+  none: {
+    label: "Belum ada jurnal",
+    colorClass: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
+  },
+  draft: {
+    label: "Masih draft",
+    colorClass: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  },
+  submitted: {
+    label: "Menunggu diperiksa",
+    colorClass: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  },
+  approved: {
+    label: "Disetujui",
+    colorClass: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  },
+  rejected: {
+    label: "Ditolak",
+    colorClass: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  },
+};
+
 export default async function GuruWaliDashboardPage({
   searchParams,
 }: {
@@ -71,11 +106,13 @@ export default async function GuruWaliDashboardPage({
 
   let journals: PendingJournal[] = [];
   let stats: GuruWaliStats | null = null;
+  let binaanStudents: BinaanStudent[] = [];
   let profileMissing = false;
   try {
-    [journals, stats] = await Promise.all([
+    [journals, stats, binaanStudents] = await Promise.all([
       apiFetch<PendingJournal[]>("/verifications/pending"),
       apiFetch<GuruWaliStats>(`/verifications/stats?date=${today}&month=${month}&days=30`),
+      apiFetch<BinaanStudent[]>(`/verifications/students?date=${today}`),
     ]);
   } catch (err) {
     if (err instanceof ApiRequestError && err.statusCode === 404) {
@@ -175,6 +212,47 @@ export default async function GuruWaliDashboardPage({
 
       <div className="mb-6">
         <DownloadGuruWaliReport />
+      </div>
+
+      <div className="glass-panel mb-6 rounded-2xl p-6">
+        <h2 className="mb-1 text-base font-semibold">Siswa Binaan Anda</h2>
+        <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
+          Daftar siswa binaan aktif beserta status jurnal mereka hari ini.
+        </p>
+
+        {binaanStudents.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            Belum ada siswa binaan yang ditugaskan ke Anda. Hubungi Admin sekolah.
+          </p>
+        ) : (
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-slate-500 dark:border-slate-700">
+                <th className="py-2">Nama</th>
+                <th className="py-2">Kelas</th>
+                <th className="py-2">Jurnal Hari Ini</th>
+              </tr>
+            </thead>
+            <tbody>
+              {binaanStudents.map((s) => {
+                const badge = STUDENT_STATUS_BADGE[s.journalStatus ?? "none"];
+                return (
+                  <tr key={s.id} className="border-b border-slate-100 dark:border-slate-800">
+                    <td className="py-2 font-medium">{s.fullName}</td>
+                    <td className="py-2">{s.className}</td>
+                    <td className="py-2">
+                      <span
+                        className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${badge.colorClass}`}
+                      >
+                        {badge.label}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="glass-panel rounded-2xl p-6">

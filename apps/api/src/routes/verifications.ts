@@ -343,6 +343,51 @@ verificationsRoute.get(
   }
 );
 
+const studentsQuerySchema = z.object({
+  date: z.string().date(),
+});
+
+/**
+ * GET /verifications/students?date=YYYY-MM-DD
+ * Daftar siswa binaan AKTIF guru yang sedang login, beserta status jurnal
+ * masing-masing pada tanggal `date` (biasanya hari ini, WIB dari frontend).
+ * journalStatus null = siswa belum membuat jurnal sama sekali di tanggal itu.
+ * Prinsip sama dengan /stats: identitas guru dari JWT, bukan dari klien.
+ */
+verificationsRoute.get(
+  "/students",
+  authMiddleware,
+  requirePermission(PERMISSIONS.JOURNAL_VERIFY),
+  zValidator("query", studentsQuerySchema),
+  async (c) => {
+    const db = c.get("db");
+    const user = c.get("user");
+    const { date } = c.req.valid("query");
+
+    const teacher = await findOwnTeacher(db, user.sub);
+    if (!teacher) return c.json(notFoundTeacher, 404);
+
+    const result = await db
+      .select({
+        id: students.id,
+        fullName: students.fullName,
+        className: students.className,
+        nis: students.nis,
+        journalStatus: journals.status,
+      })
+      .from(teacherStudent)
+      .innerJoin(students, eq(teacherStudent.studentId, students.id))
+      .leftJoin(
+        journals,
+        and(eq(journals.studentId, students.id), eq(journals.journalDate, date))
+      )
+      .where(and(eq(teacherStudent.teacherId, teacher.id), eq(teacherStudent.isActive, true)))
+      .orderBy(asc(students.className), asc(students.fullName));
+
+    return c.json({ data: result });
+  }
+);
+
 /**
  * GET /verifications/journals/:id
  * Detail satu jurnal siswa binaan: jurnal + identitas siswa + item + hasil
