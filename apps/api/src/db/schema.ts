@@ -305,6 +305,12 @@ export const journalItems = pgTable("journal_items", {
   recordedTime: time("recorded_time"),
   note: text("note"),
   photoUrl: text("photo_url"), // URL objek di Cloudflare R2
+  // Jawaban model formulir (revisi Juli 2026 tahap 2): Record<key, string>
+  // sesuai HABIT_QUESTION_SETS di packages/shared. NULL = data lama
+  // (model status/keterangan) - sengaja TIDAK dimigrasikan. Status item
+  // untuk baris ber-answers diderivasi server (selesai|belum, tanpa
+  // "sebagian") agar analytics lama tetap akurat.
+  answers: jsonb("answers").$type<Record<string, string>>(),
 });
 
 /**

@@ -121,6 +121,7 @@ childrenRoute.get(
         recordedTime: journalItems.recordedTime,
         note: journalItems.note,
         photoUrl: journalItems.photoUrl,
+        answers: journalItems.answers,
         itemName: journalTemplateItems.itemName,
         itemType: journalTemplateItems.itemType,
         orderIndex: journalTemplateItems.orderIndex,

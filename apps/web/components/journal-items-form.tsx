@@ -2,6 +2,14 @@
 
 import { useState, useTransition } from "react";
 import {
+  findHabitQuestionSet,
+  visibleQuestions,
+  missingRequiredQuestions,
+  deriveHabitStatus,
+  type HabitQuestionSet,
+  type JournalAnswers,
+} from "@sjk/shared";
+import {
   updateJournalItem,
   submitJournal,
   uploadJournalPhoto,
@@ -12,9 +20,10 @@ import type { JournalItemData } from "@/components/journal-items-view";
 const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80";
 
+// Status "sebagian" dihapus (revisi Juli 2026 tahap 2) - hanya untuk item
+// tambahan sekolah yang tidak punya set pertanyaan.
 const STATUS_OPTIONS = [
   { value: "belum", label: "Belum" },
-  { value: "sebagian", label: "Sebagian" },
   { value: "selesai", label: "Selesai" },
 ] as const;
 
@@ -66,6 +75,21 @@ interface SavedItemValues {
   status: JournalItemData["status"];
   note: string;
   photoUrl: string;
+  answers: JournalAnswers;
+}
+
+/**
+ * Ambil hanya jawaban pertanyaan yang sedang TAMPIL dan tidak kosong.
+ * Jawaban pertanyaan yang tersembunyi (mis. sholat setelah agama diganti
+ * ke non-Islam) sengaja dibuang saat menyimpan agar tidak jadi data hantu.
+ */
+function cleanAnswers(set: HabitQuestionSet, answers: JournalAnswers): JournalAnswers {
+  const cleaned: JournalAnswers = {};
+  for (const q of visibleQuestions(set, answers)) {
+    const value = (answers[q.key] ?? "").trim();
+    if (value !== "") cleaned[q.key] = value;
+  }
+  return cleaned;
 }
 
 /**
@@ -74,15 +98,16 @@ interface SavedItemValues {
  * bukan <form action>, karena input berupa array dinamis mengikuti item
  * template).
  *
- * Aturan 7 Kebiasaan Anak Indonesia Hebat (harus sama dengan validasi
- * server di apps/api/src/routes/journals.ts endpoint submit):
- * 1. Semua item wajib terisi - status "belum" hanya boleh jika ada keterangan.
- * 2. Wajib minimal satu foto bukti; kebiasaan wajib berbukti datang dari
- *    Bukti Harian Guru Wali (menang) atau default template (requiresPhoto),
- *    dan setiap yang dikerjakan harus berfoto (status "belum" berketerangan
- *    dikecualikan; tanpa kebiasaan wajib berlaku fallback foto bebas).
- * Validasi di sini hanya untuk pesan yang ramah; server tetap sumber
- * kebenaran dan memvalidasi ulang.
+ * Revisi Juli 2026 tahap 2 - model formulir:
+ * - Item 7 kebiasaan tetap (punya set pertanyaan di HABIT_QUESTION_SETS)
+ *   dirender sebagai pertanyaan pilihan ganda/teks bersyarat ala formulir,
+ *   TANPA dropdown status. Status (selesai|belum) diderivasi server dari
+ *   jawaban; "sebagian" tidak dipakai lagi.
+ * - Item tambahan sekolah (tanpa set pertanyaan) tetap memakai model lama
+ *   (status + keterangan), minus opsi "Sebagian".
+ * Aturan foto bukti tidak berubah: minimal satu foto; kebiasaan wajib
+ * berbukti datang dari Bukti Harian Guru Wali (menang) atau default
+ * template. Server tetap sumber kebenaran dan memvalidasi ulang.
  */
 function ItemRow({
   journalId,
@@ -95,7 +120,12 @@ function ItemRow({
   isEvidenceRequired: boolean;
   onSaved: (itemId: string, values: SavedItemValues) => void;
 }) {
-  const [status, setStatus] = useState<JournalItemData["status"]>(item.status);
+  const questionSet = findHabitQuestionSet(item.itemName);
+
+  const [answers, setAnswers] = useState<JournalAnswers>(item.answers ?? {});
+  const [status, setStatus] = useState<JournalItemData["status"]>(
+    item.status === "sebagian" ? "selesai" : item.status
+  );
   const [recordedTime, setRecordedTime] = useState(item.recordedTime?.slice(0, 5) ?? "");
   const [note, setNote] = useState(item.note ?? "");
   const [photoUrl, setPhotoUrl] = useState(item.photoUrl ?? "");
@@ -111,6 +141,11 @@ function ItemRow({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  function setAnswer(key: string, value: string) {
+    setAnswers((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+  }
+
   function handleSave() {
     setSaved(false);
     setError(null);
@@ -118,29 +153,50 @@ function ItemRow({
     const trimmedNote = note.trim();
     const trimmedPhoto = photoUrl.trim();
 
-    // Status efektif: tipe catatan/foto tidak punya dropdown status,
-    // statusnya diturunkan dari isiannya.
-    let effectiveStatus = status;
-    if (item.itemType === "catatan") {
-      effectiveStatus = trimmedNote ? "selesai" : "belum";
-    } else if (item.itemType === "foto") {
-      effectiveStatus = trimmedPhoto ? "selesai" : "belum";
-    }
+    let payload: UpdateJournalItemPayload;
+    let savedStatus: SavedItemValues["status"];
+    let savedAnswers: JournalAnswers = {};
 
-    const payload: UpdateJournalItemPayload = {
-      status: effectiveStatus,
-      note: trimmedNote || null,
-      photoUrl: trimmedPhoto || null,
-    };
-    if (item.itemType === "waktu") {
-      payload.recordedTime = recordedTime || null;
+    if (questionSet) {
+      savedAnswers = cleanAnswers(questionSet, answers);
+      // Status ikut diderivasi server dari answers; nilai di sini hanya
+      // untuk replika validasi client sebelum kirim.
+      savedStatus = deriveHabitStatus(questionSet, savedAnswers);
+      payload = {
+        answers: savedAnswers,
+        photoUrl: trimmedPhoto || null,
+      };
+    } else {
+      // Status efektif item lama: tipe catatan/foto tidak punya dropdown
+      // status, statusnya diturunkan dari isiannya.
+      let effectiveStatus: "selesai" | "belum" =
+        status === "sebagian" ? "selesai" : status;
+      if (item.itemType === "catatan") {
+        effectiveStatus = trimmedNote ? "selesai" : "belum";
+      } else if (item.itemType === "foto") {
+        effectiveStatus = trimmedPhoto ? "selesai" : "belum";
+      }
+      savedStatus = effectiveStatus;
+      payload = {
+        status: effectiveStatus,
+        note: trimmedNote || null,
+        photoUrl: trimmedPhoto || null,
+      };
+      if (item.itemType === "waktu") {
+        payload.recordedTime = recordedTime || null;
+      }
     }
 
     startTransition(async () => {
       try {
         await updateJournalItem(journalId, item.id, payload);
         setSaved(true);
-        onSaved(item.id, { status: effectiveStatus, note: trimmedNote, photoUrl: trimmedPhoto });
+        onSaved(item.id, {
+          status: savedStatus,
+          note: trimmedNote,
+          photoUrl: trimmedPhoto,
+          answers: savedAnswers,
+        });
         setUploadedNotSaved(false);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Gagal menyimpan.");
@@ -173,7 +229,10 @@ function ItemRow({
     }
   }
 
-  const needsNoteHint = (item.itemType === "checklist" || item.itemType === "waktu") && status === "belum";
+  const needsNoteHint =
+    !questionSet &&
+    (item.itemType === "checklist" || item.itemType === "waktu") &&
+    status === "belum";
 
   return (
     <li className="flex flex-col gap-2 py-4">
@@ -187,50 +246,91 @@ function ItemRow({
       </div>
       {item.description && <p className="text-xs text-slate-500">{item.description}</p>}
 
-      <div className="flex flex-wrap items-center gap-2">
-        {(item.itemType === "checklist" || item.itemType === "waktu") && (
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as JournalItemData["status"])}
-            className={`${inputClass} w-36`}
-          >
-            {STATUS_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {item.itemType === "waktu" && (
-          <input
-            type="time"
-            value={recordedTime}
-            onChange={(e) => setRecordedTime(e.target.value)}
-            className={`${inputClass} w-32`}
-          />
-        )}
-      </div>
-
-      {item.itemType === "catatan" ? (
-        <textarea
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          rows={3}
-          placeholder="Tulis catatanmu di sini..."
-          className={inputClass}
-        />
+      {questionSet ? (
+        <div className="flex flex-col gap-3">
+          {visibleQuestions(questionSet, answers).map((q) => (
+            <div key={q.key} className="flex flex-col gap-1.5">
+              <p className="text-sm">
+                {q.label}
+                {q.required && <span className="ml-0.5 text-red-600">*</span>}
+              </p>
+              {q.type === "pilihan" ? (
+                <div className="flex flex-col gap-1">
+                  {(q.options ?? []).map((opt) => (
+                    <label
+                      key={opt}
+                      className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-300"
+                    >
+                      <input
+                        type="radio"
+                        name={`${item.id}-${q.key}`}
+                        checked={(answers[q.key] ?? "") === opt}
+                        onChange={() => setAnswer(q.key, opt)}
+                        className="h-4 w-4 accent-brand-600"
+                      />
+                      {opt}
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <input
+                  value={answers[q.key] ?? ""}
+                  onChange={(e) => setAnswer(q.key, e.target.value)}
+                  placeholder={q.hint ?? "Jawabanmu"}
+                  className={inputClass}
+                />
+              )}
+            </div>
+          ))}
+        </div>
       ) : (
-        <input
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          placeholder={
-            needsNoteHint
-              ? "Keterangan WAJIB diisi karena status masih Belum"
-              : "Keterangan (wajib diisi jika Belum)"
-          }
-          className={inputClass}
-        />
+        <>
+          <div className="flex flex-wrap items-center gap-2">
+            {(item.itemType === "checklist" || item.itemType === "waktu") && (
+              <select
+                value={status === "sebagian" ? "selesai" : status}
+                onChange={(e) => setStatus(e.target.value as "selesai" | "belum")}
+                className={`${inputClass} w-36`}
+              >
+                {STATUS_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {item.itemType === "waktu" && (
+              <input
+                type="time"
+                value={recordedTime}
+                onChange={(e) => setRecordedTime(e.target.value)}
+                className={`${inputClass} w-32`}
+              />
+            )}
+          </div>
+
+          {item.itemType === "catatan" ? (
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={3}
+              placeholder="Tulis catatanmu di sini..."
+              className={inputClass}
+            />
+          ) : (
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder={
+                needsNoteHint
+                  ? "Keterangan WAJIB diisi karena status masih Belum"
+                  : "Keterangan (wajib diisi jika Belum)"
+              }
+              className={inputClass}
+            />
+          )}
+        </>
       )}
 
       {/* Foto bukti - dua cara: unggah dari HP/komputer, atau tempel tautan */}
@@ -354,7 +454,12 @@ export function JournalItemsForm({
     Object.fromEntries(
       items.map((i) => [
         i.id,
-        { status: i.status, note: (i.note ?? "").trim(), photoUrl: (i.photoUrl ?? "").trim() },
+        {
+          status: i.status,
+          note: (i.note ?? "").trim(),
+          photoUrl: (i.photoUrl ?? "").trim(),
+          answers: i.answers ?? {},
+        },
       ])
     )
   );
@@ -367,11 +472,16 @@ export function JournalItemsForm({
   function validate(): string | null {
     const incomplete = items.filter((i) => {
       const v = savedValues[i.id];
-      return v && v.status === "belum" && v.note === "";
+      if (!v) return false;
+      const questionSet = findHabitQuestionSet(i.itemName);
+      if (questionSet) {
+        return missingRequiredQuestions(questionSet, v.answers).length > 0;
+      }
+      return v.status === "belum" && v.note === "";
     });
     if (incomplete.length > 0) {
       return (
-        "Semua kebiasaan wajib diisi. Lengkapi (atau beri keterangan jika belum dilakukan): " +
+        "Semua kebiasaan wajib diisi. Lengkapi pertanyaan yang bertanda * (atau beri keterangan jika belum dilakukan): " +
         incomplete.map((i) => i.itemName).join(", ") +
         ". Jangan lupa klik Simpan pada setiap item."
       );

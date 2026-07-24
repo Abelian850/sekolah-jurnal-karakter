@@ -1,0 +1,1 @@
+ALTER TABLE "journal_items" ADD COLUMN "answers" jsonb;

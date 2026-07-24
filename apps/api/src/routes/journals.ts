@@ -2,7 +2,13 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { eq, and, asc, desc, gte, lte, isNotNull, sql } from "drizzle-orm";
-import { PERMISSIONS } from "@sjk/shared";
+import {
+  PERMISSIONS,
+  findHabitQuestionSet,
+  missingRequiredQuestions,
+  deriveHabitStatus,
+  type JournalAnswers,
+} from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
 import {
@@ -106,6 +112,7 @@ async function listJournalItems(db: Database, journalId: string) {
       recordedTime: journalItems.recordedTime,
       note: journalItems.note,
       photoUrl: journalItems.photoUrl,
+      answers: journalItems.answers,
       itemName: journalTemplateItems.itemName,
       itemType: journalTemplateItems.itemType,
       orderIndex: journalTemplateItems.orderIndex,
@@ -533,18 +540,29 @@ journalsRoute.get(
   }
 );
 
+// Status "sebagian" TIDAK diterima lagi untuk isian baru (revisi Juli 2026
+// tahap 2) - enum DB dipertahankan hanya untuk data lama yang dibiarkan
+// apa adanya.
 const updateItemSchema = z
   .object({
-    status: z.enum(["selesai", "belum", "sebagian"]).optional(),
+    status: z.enum(["selesai", "belum"]).optional(),
     recordedTime: z
       .string()
       .regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, "Format waktu HH:MM")
       .nullish(),
     note: z.string().max(2000).nullish(),
     photoUrl: z.string().max(2048).nullish(),
+    // Jawaban model formulir per kebiasaan (HABIT_QUESTION_SETS di
+    // packages/shared). Key & value string; value maks 2000 karakter.
+    answers: z.record(z.string().max(100), z.string().max(2000)).nullish(),
   })
   .refine(
-    (v) => v.status !== undefined || v.recordedTime !== undefined || v.note !== undefined || v.photoUrl !== undefined,
+    (v) =>
+      v.status !== undefined ||
+      v.recordedTime !== undefined ||
+      v.note !== undefined ||
+      v.photoUrl !== undefined ||
+      v.answers !== undefined,
     { message: "Tidak ada field yang diubah" }
   );
 
@@ -575,8 +593,12 @@ journalsRoute.patch(
     }
 
     const [existing] = await db
-      .select()
+      .select({
+        item: journalItems,
+        itemName: journalTemplateItems.itemName,
+      })
       .from(journalItems)
+      .innerJoin(journalTemplateItems, eq(journalItems.templateItemId, journalTemplateItems.id))
       .where(and(eq(journalItems.id, itemId), eq(journalItems.journalId, journal.id)));
     if (!existing) {
       return c.json(
@@ -585,13 +607,27 @@ journalsRoute.patch(
       );
     }
 
+    // Untuk item dengan set pertanyaan (7 kebiasaan tetap), status TIDAK
+    // dipercaya dari klien - diderivasi server dari jawaban (selesai|belum,
+    // tanpa "sebagian") agar analytics & badge konsisten.
+    const questionSet = findHabitQuestionSet(existing.itemName);
+    let derivedStatus: "selesai" | "belum" | undefined;
+    if (body.answers !== undefined && questionSet) {
+      derivedStatus = deriveHabitStatus(questionSet, (body.answers ?? {}) as JournalAnswers);
+    }
+
     const [updated] = await db
       .update(journalItems)
       .set({
-        ...(body.status !== undefined ? { status: body.status } : {}),
+        ...(derivedStatus !== undefined
+          ? { status: derivedStatus }
+          : body.status !== undefined
+            ? { status: body.status }
+            : {}),
         ...(body.recordedTime !== undefined ? { recordedTime: body.recordedTime } : {}),
         ...(body.note !== undefined ? { note: body.note } : {}),
         ...(body.photoUrl !== undefined ? { photoUrl: body.photoUrl } : {}),
+        ...(body.answers !== undefined ? { answers: body.answers ?? null } : {}),
       })
       .where(eq(journalItems.id, itemId))
       .returning();
@@ -624,14 +660,23 @@ journalsRoute.patch(
     }
 
     // ---------- Validasi 7 Kebiasaan Anak Indonesia Hebat ----------
-    // Aturan 1: SEMUA item wajib terisi. Item dianggap terisi jika
-    // statusnya selesai/sebagian, ATAU berstatus "belum" DENGAN keterangan
-    // (siswa boleh tidak melakukan kebiasaan, tapi wajib menjelaskan).
+    // Aturan 1: SEMUA item wajib terisi (revisi Juli 2026 tahap 2 - model
+    // formulir). Item dengan set pertanyaan (7 kebiasaan tetap) dianggap
+    // terisi jika semua pertanyaan wajib yang tampil sudah dijawab
+    // (missingRequiredQuestions == []). Item lain (tambahan sekolah, atau
+    // draft lama tanpa answers) memakai aturan lama: status "belum" hanya
+    // sah jika ada keterangan.
     const items = await listJournalItems(db, journal.id);
 
-    const incomplete = items.filter(
-      (i) => i.status === "belum" && (i.note ?? "").trim() === ""
-    );
+    const incomplete = items.filter((i) => {
+      const questionSet = findHabitQuestionSet(i.itemName);
+      if (questionSet) {
+        return (
+          missingRequiredQuestions(questionSet, (i.answers ?? {}) as JournalAnswers).length > 0
+        );
+      }
+      return i.status === "belum" && (i.note ?? "").trim() === "";
+    });
     if (incomplete.length > 0) {
       return c.json(
         {

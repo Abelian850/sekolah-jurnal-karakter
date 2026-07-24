@@ -10,7 +10,7 @@ interface School {
 }
 
 const ITEM_TYPES: Array<{ value: NewTemplateItem["itemType"]; label: string }> = [
-  { value: "checklist", label: "Checklist (selesai/belum/sebagian)" },
+  { value: "checklist", label: "Checklist (selesai/belum)" },
   { value: "waktu", label: "Waktu (jam pelaksanaan)" },
   { value: "catatan", label: "Catatan (teks bebas)" },
   { value: "foto", label: "Foto (tautan URL)" },

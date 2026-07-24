@@ -27,10 +27,13 @@ export async function createTodayJournal() {
 }
 
 export interface UpdateJournalItemPayload {
-  status?: "selesai" | "belum" | "sebagian";
+  // "sebagian" dihapus dari isian baru (revisi Juli 2026 tahap 2).
+  status?: "selesai" | "belum";
   recordedTime?: string | null;
   note?: string | null;
   photoUrl?: string | null;
+  /** Jawaban model formulir per kebiasaan (HABIT_QUESTION_SETS di @sjk/shared). */
+  answers?: Record<string, string> | null;
 }
 
 export async function updateJournalItem(
