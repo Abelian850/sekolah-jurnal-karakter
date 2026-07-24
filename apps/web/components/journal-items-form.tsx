@@ -235,22 +235,23 @@ function ItemRow({
     status === "belum";
 
   return (
-    <li className="flex flex-col gap-2 py-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <p className="text-sm font-medium">{item.itemName}</p>
+    <li className="overflow-hidden rounded-2xl border border-slate-200 bg-white/70 dark:border-slate-800 dark:bg-slate-900/60">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-600 px-4 py-2.5">
+        <p className="text-sm font-semibold text-white">{item.itemName}</p>
         {isEvidenceRequired && (
-          <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-600 dark:bg-brand-900/40 dark:text-brand-500">
+          <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-medium text-white">
             Wajib foto hari ini
           </span>
         )}
       </div>
+      <div className="flex flex-col gap-3 p-4">
       {item.description && <p className="text-xs text-slate-500">{item.description}</p>}
 
       {questionSet ? (
         <div className="flex flex-col gap-3">
           {visibleQuestions(questionSet, answers).map((q) => (
             <div key={q.key} className="flex flex-col gap-1.5">
-              <p className="text-sm">
+              <p className="text-sm font-medium">
                 {q.label}
                 {q.required && <span className="ml-0.5 text-red-600">*</span>}
               </p>
@@ -431,6 +432,7 @@ function ItemRow({
         {saved && <span className="text-xs text-green-600">Tersimpan</span>}
         {error && <span className="text-xs text-red-600">{error}</span>}
       </div>
+      </div>
     </li>
   );
 }
@@ -548,7 +550,7 @@ export function JournalItemsForm({
         </div>
       )}
 
-      <ul className="flex flex-col divide-y divide-slate-100 dark:divide-slate-800">
+      <ul className="flex flex-col gap-4">
         {items.map((item) => (
           <ItemRow
             key={item.id}
