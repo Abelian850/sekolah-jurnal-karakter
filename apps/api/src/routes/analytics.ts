@@ -12,6 +12,7 @@ import {
   journalItems,
   journalTemplateItems,
   verifications,
+  comments,
 } from "../db/schema";
 import type { Database } from "../db/client";
 import type { Env, Variables } from "../index";
@@ -594,6 +595,234 @@ analyticsRoute.get(
           templateItemId: r.templateItemId,
           selesai: r.selesai,
         })),
+      },
+    });
+  }
+);
+
+/**
+ * GET /analytics/student-report?studentId=<uuid>&from=YYYY-MM-DD&to=YYYY-MM-DD
+ * (Guru Wali) — Laporan per-siswa untuk halaman printable
+ * /dashboard/guru-wali/siswa/[studentId]/laporan.
+ *
+ * Scoping identik dengan /guru-wali-recap: identitas guru dari JWT,
+ * murid WAJIB tercatat sebagai binaan aktif guru tsb (teacher_student) —
+ * bukan dari parameter klien saja, supaya guru tidak bisa mengintip
+ * laporan murid guru lain.
+ *
+ * Isi respons:
+ * - meta      : sekolah, guru wali, identitas murid, periode
+ * - summary   : jumlah jurnal per status, hari tanpa jurnal, rata-rata
+ *               nilai karakter, jumlah komentar orang tua
+ * - habits    : per kebiasaan — berapa kali "selesai" vs total kemunculan
+ *               (hanya jurnal submitted/approved, rasional sama dgn recap)
+ * - lastPhoto : foto bukti TERBARU dari jurnal ber-status approved
+ *               (terverifikasi) dalam periode; null bila tidak ada
+ * - lastNote  : catatan verifikasi terbaru dari Guru Wali; null bila kosong
+ */
+analyticsRoute.get(
+  "/student-report",
+  authMiddleware,
+  requirePermission(PERMISSIONS.JOURNAL_VERIFY),
+  async (c) => {
+    const db = c.get("db");
+    const user = c.get("user");
+
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    const studentId = c.req.query("studentId");
+    const from = c.req.query("from");
+    const to = c.req.query("to");
+    if (!studentId || !uuidRe.test(studentId)) {
+      return c.json(
+        { error: "invalid_student", message: "Parameter studentId wajib (uuid)", statusCode: 422 },
+        422
+      );
+    }
+    if (!from || !to || !dateRe.test(from) || !dateRe.test(to) || from > to) {
+      return c.json(
+        {
+          error: "invalid_range",
+          message: "Parameter from & to wajib (YYYY-MM-DD) dan from <= to",
+          statusCode: 422,
+        },
+        422
+      );
+    }
+    const totalDays =
+      Math.round(
+        (new Date(`${to}T00:00:00Z`).getTime() - new Date(`${from}T00:00:00Z`).getTime()) /
+          86400000
+      ) + 1;
+    if (totalDays > 366) {
+      return c.json(
+        { error: "invalid_range", message: "Periode maksimal 366 hari", statusCode: 422 },
+        422
+      );
+    }
+
+    const [teacherRow] = await db
+      .select({ id: teachers.id, fullName: teachers.fullName, schoolName: schools.name })
+      .from(teachers)
+      .innerJoin(schools, eq(teachers.schoolId, schools.id))
+      .where(eq(teachers.userId, user.sub));
+    if (!teacherRow) {
+      return c.json(
+        {
+          error: "not_found",
+          message: "Profil guru untuk akun ini tidak ditemukan. Hubungi Admin sekolah.",
+          statusCode: 404,
+        },
+        404
+      );
+    }
+
+    // Murid harus binaan AKTIF guru ini — sekaligus ambil identitasnya.
+    const [studentRow] = await db
+      .select({
+        id: students.id,
+        fullName: students.fullName,
+        nisn: students.nisn,
+        nis: students.nis,
+        className: students.className,
+        photoUrl: students.photoUrl,
+      })
+      .from(teacherStudent)
+      .innerJoin(students, eq(teacherStudent.studentId, students.id))
+      .where(
+        and(
+          eq(teacherStudent.teacherId, teacherRow.id),
+          eq(teacherStudent.studentId, studentId),
+          eq(teacherStudent.isActive, true)
+        )
+      );
+    if (!studentRow) {
+      return c.json(
+        {
+          error: "not_found",
+          message: "Murid ini bukan murid perwalian aktif Anda.",
+          statusCode: 404,
+        },
+        404
+      );
+    }
+
+    const rangeFilter = and(
+      eq(journals.studentId, studentId),
+      gte(journals.journalDate, from),
+      lte(journals.journalDate, to)
+    );
+
+    // ---- Jumlah jurnal per status ----
+    const [statusRow] = await db
+      .select({
+        draft: sql<number>`count(*) filter (where ${journals.status} = 'draft')::int`,
+        submitted: sql<number>`count(*) filter (where ${journals.status} = 'submitted')::int`,
+        approved: sql<number>`count(*) filter (where ${journals.status} = 'approved')::int`,
+        rejected: sql<number>`count(*) filter (where ${journals.status} = 'rejected')::int`,
+      })
+      .from(journals)
+      .where(rangeFilter);
+
+    // ---- Rata-rata nilai karakter ----
+    const [scoreRow] = await db
+      .select({
+        avgScore: sql<number>`round(avg(${verifications.characterScore}))::int`,
+      })
+      .from(verifications)
+      .innerJoin(journals, eq(verifications.journalId, journals.id))
+      .where(and(isNotNull(verifications.characterScore), rangeFilter));
+
+    // ---- Jumlah komentar orang tua pada jurnal periode ini ----
+    const [commentRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(comments)
+      .innerJoin(journals, eq(comments.journalId, journals.id))
+      .where(rangeFilter);
+
+    // ---- Capaian per kebiasaan (jurnal submitted/approved saja) ----
+    const habitRows = await db
+      .select({
+        templateItemId: journalItems.templateItemId,
+        itemName: journalTemplateItems.itemName,
+        orderIndex: journalTemplateItems.orderIndex,
+        selesai: sql<number>`count(*) filter (where ${journalItems.status} = 'selesai')::int`,
+        total: sql<number>`count(*)::int`,
+      })
+      .from(journalItems)
+      .innerJoin(journals, eq(journalItems.journalId, journals.id))
+      .innerJoin(
+        journalTemplateItems,
+        eq(journalItems.templateItemId, journalTemplateItems.id)
+      )
+      .where(and(inArray(journals.status, ["submitted", "approved"]), rangeFilter))
+      .groupBy(
+        journalItems.templateItemId,
+        journalTemplateItems.itemName,
+        journalTemplateItems.orderIndex
+      )
+      .orderBy(journalTemplateItems.orderIndex, journalTemplateItems.itemName);
+
+    // ---- Foto bukti terbaru dari jurnal TERVERIFIKASI (approved) ----
+    const [lastPhoto] = await db
+      .select({
+        photoUrl: journalItems.photoUrl,
+        itemName: journalTemplateItems.itemName,
+        journalDate: journals.journalDate,
+      })
+      .from(journalItems)
+      .innerJoin(journals, eq(journalItems.journalId, journals.id))
+      .innerJoin(
+        journalTemplateItems,
+        eq(journalItems.templateItemId, journalTemplateItems.id)
+      )
+      .where(
+        and(eq(journals.status, "approved"), isNotNull(journalItems.photoUrl), rangeFilter)
+      )
+      .orderBy(desc(journals.journalDate))
+      .limit(1);
+
+    // ---- Catatan verifikasi terbaru yang berisi ----
+    const [lastNote] = await db
+      .select({
+        note: verifications.note,
+        journalDate: journals.journalDate,
+      })
+      .from(verifications)
+      .innerJoin(journals, eq(verifications.journalId, journals.id))
+      .where(
+        and(isNotNull(verifications.note), sql`${verifications.note} <> ''`, rangeFilter)
+      )
+      .orderBy(desc(verifications.verifiedAt))
+      .limit(1);
+
+    const draft = statusRow?.draft ?? 0;
+    const submitted = statusRow?.submitted ?? 0;
+    const approved = statusRow?.approved ?? 0;
+    const rejected = statusRow?.rejected ?? 0;
+
+    return c.json({
+      data: {
+        meta: {
+          schoolName: teacherRow.schoolName,
+          teacherName: teacherRow.fullName,
+          from,
+          to,
+          totalDays,
+        },
+        student: studentRow,
+        summary: {
+          draft,
+          submitted,
+          approved,
+          rejected,
+          daysWithoutJournal: Math.max(totalDays - (draft + submitted + approved + rejected), 0),
+          avgScore: scoreRow?.avgScore ?? null,
+          commentCount: commentRow?.count ?? 0,
+        },
+        habits: habitRows,
+        lastPhoto: lastPhoto ?? null,
+        lastNote: lastNote ?? null,
       },
     });
   }

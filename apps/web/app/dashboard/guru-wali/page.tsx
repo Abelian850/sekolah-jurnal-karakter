@@ -231,6 +231,7 @@ export default async function GuruWaliDashboardPage({
                 <th className="py-2">Nama</th>
                 <th className="py-2">Kelas</th>
                 <th className="py-2">Jurnal Hari Ini</th>
+                <th className="py-2">Laporan</th>
               </tr>
             </thead>
             <tbody>
@@ -246,6 +247,14 @@ export default async function GuruWaliDashboardPage({
                       >
                         {badge.label}
                       </span>
+                    </td>
+                    <td className="py-2">
+                      <Link
+                        href={`/dashboard/guru-wali/siswa/${s.id}/laporan`}
+                        className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                      >
+                        Unduh Laporan
+                      </Link>
                     </td>
                   </tr>
                 );
