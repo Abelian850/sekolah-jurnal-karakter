@@ -8,11 +8,11 @@ import {
 } from "@/app/dashboard/admin/siswa/hapus-massal/actions";
 
 /**
- * Hapus massal peserta didik berdasarkan NISN dari file Excel.
+ * Hapus massal murid berdasarkan NISN dari file Excel.
  * Parsing dilakukan di browser (pola sama dengan bulk-import-students.tsx,
  * lihat docs/bulk-import-export.md). Hanya kolom `nisn` yang dibaca —
  * kolom lain diabaikan, sehingga file hasil "Export Excel" bisa langsung
- * dipakai setelah baris siswa yang TIDAK ingin dihapus dibuang.
+ * dipakai setelah baris murid yang TIDAK ingin dihapus dibuang.
  *
  * Sengaja tidak mendukung penghapusan berdasarkan nama: nama tidak unik
  * dan rawan salah ketik; NISN adalah kunci unik nasional.
@@ -87,8 +87,8 @@ export function BulkDeleteStudents() {
   async function handleSubmit() {
     if (
       !window.confirm(
-        `HAPUS ${nisns.length} peserta didik beserta akun login mereka? ` +
-          `Tindakan ini tidak bisa dibatalkan. Siswa yang sudah punya jurnal akan otomatis dilewati.`
+        `HAPUS ${nisns.length} murid beserta akun login mereka? ` +
+          `Tindakan ini tidak bisa dibatalkan. Murid yang sudah punya jurnal akan otomatis dilewati.`
       )
     ) {
       return;
@@ -156,7 +156,7 @@ export function BulkDeleteStudents() {
             disabled={submitting}
             className="w-fit rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-60"
           >
-            {submitting ? "Menghapus..." : `Hapus ${nisns.length} Peserta Didik`}
+            {submitting ? "Menghapus..." : `Hapus ${nisns.length} Murid`}
           </button>
         </>
       )}

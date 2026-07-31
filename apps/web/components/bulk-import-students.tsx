@@ -45,8 +45,8 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
       },
     ]);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Peserta Didik");
-    XLSX.writeFile(wb, "template-import-siswa.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Murid");
+    XLSX.writeFile(wb, "template-import-murid.xlsx");
   }
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
@@ -217,7 +217,7 @@ export function BulkImportStudents({ schools }: { schools: { id: string; name: s
             disabled={submitting}
             className="w-fit rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-60"
           >
-            {submitting ? "Mengunggah..." : `Impor ${rows.length} Peserta Didik`}
+            {submitting ? "Mengunggah..." : `Impor ${rows.length} Murid`}
           </button>
         </>
       )}

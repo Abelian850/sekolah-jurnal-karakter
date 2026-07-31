@@ -7,14 +7,14 @@ export interface BulkDeleteResult {
   row: number;
   nisn: string;
   success: boolean;
-  /** Nama siswa saat sukses, atau alasan kegagalan saat gagal. */
+  /** Nama murid saat sukses, atau alasan kegagalan saat gagal. */
   message?: string;
 }
 
 /**
- * Hapus banyak peserta didik sekaligus berdasarkan daftar NISN.
+ * Hapus banyak murid sekaligus berdasarkan daftar NISN.
  * Sengaja hanya NISN (bukan nama) — nama tidak unik. API memproses per
- * baris: NISN tak ditemukan atau siswa yang sudah punya jurnal dilaporkan
+ * baris: NISN tak ditemukan atau murid yang sudah punya jurnal dilaporkan
  * gagal tanpa menghentikan baris lain (POST /students/bulk-delete).
  */
 export async function bulkDeleteStudents(nisns: string[]): Promise<BulkDeleteResult[]> {

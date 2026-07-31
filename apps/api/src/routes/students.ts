@@ -45,11 +45,11 @@ async function findStudentByNisn(db: Parameters<typeof createUserAccount>[0], ni
 const createStudentSchema = z.object({ schoolId: z.string().uuid(), ...studentFields });
 
 /**
- * GET /students/me - profil siswa milik akun yang sedang login.
+ * GET /students/me - profil murid milik akun yang sedang login.
  * Hanya authMiddleware, tanpa gerbang permission: endpoint ini semata
  * me-resolve baris students berdasarkan users.id dari JWT, dan setiap
  * handler di journals.ts tetap menurunkan kepemilikan dari database
- * sendiri, jadi tidak ada data siswa lain yang bisa bocor dari sini.
+ * sendiri, jadi tidak ada data murid lain yang bisa bocor dari sini.
  */
 studentsRoute.get("/me", authMiddleware, async (c) => {
   const db = c.get("db");
@@ -60,7 +60,7 @@ studentsRoute.get("/me", authMiddleware, async (c) => {
     return c.json(
       {
         error: "not_found",
-        message: "Profil peserta didik untuk akun ini tidak ditemukan. Hubungi Admin sekolah.",
+        message: "Profil murid untuk akun ini tidak ditemukan. Hubungi Admin sekolah.",
         statusCode: 404,
       },
       404
@@ -78,9 +78,9 @@ studentsRoute.get(
     const db = c.get("db");
     const schoolId = c.req.query("schoolId");
     const className = c.req.query("className");
-    // Default: HANYA siswa aktif (alumni/nonaktif disembunyikan dari
+    // Default: HANYA murid aktif (alumni/nonaktif disembunyikan dari
     // daftar, penugasan wali, dan ekspor). ?includeInactive=true untuk
-    // menampilkan semuanya (opsi "tampilkan alumni" di daftar siswa).
+    // menampilkan semuanya (opsi "tampilkan alumni" di daftar murid).
     const includeInactive = c.req.query("includeInactive") === "true";
 
     let result = schoolId
@@ -254,9 +254,9 @@ studentsRoute.post(
 );
 
 /**
- * PATCH /students/:id/reset-password - reset kata sandi siswa kembali ke
- * NISN-nya. Untuk siswa lama yang dibuat sebelum konvensi login-NISN, atau
- * siswa yang lupa kata sandi. Hanya Admin (STUDENT_MANAGE).
+ * PATCH /students/:id/reset-password - reset kata sandi murid kembali ke
+ * NISN-nya. Untuk murid lama yang dibuat sebelum konvensi login-NISN, atau
+ * murid yang lupa kata sandi. Hanya Admin (STUDENT_MANAGE).
  */
 studentsRoute.patch(
   "/:id/reset-password",
@@ -270,7 +270,7 @@ studentsRoute.patch(
     const [student] = await db.select().from(students).where(eq(students.id, id));
     if (!student) {
       return c.json(
-        { error: "not_found", message: "Peserta didik tidak ditemukan", statusCode: 404 },
+        { error: "not_found", message: "Murid tidak ditemukan", statusCode: 404 },
         404
       );
     }
@@ -279,7 +279,7 @@ studentsRoute.patch(
         {
           error: "bad_request",
           message:
-            "Siswa ini belum memiliki NISN, jadi kata sandi tidak bisa direset ke NISN. Lengkapi NISN-nya dulu.",
+            "Murid ini belum memiliki NISN, jadi kata sandi tidak bisa direset ke NISN. Lengkapi NISN-nya dulu.",
           statusCode: 400,
         },
         400
@@ -302,15 +302,15 @@ studentsRoute.patch(
   }
 );
 
-// (hapus peserta didik)
+// (hapus murid)
 /**
- * DELETE /students/:id - hapus peserta didik beserta akun login-nya. Untuk
+ * DELETE /students/:id - hapus murid beserta akun login-nya. Untuk
  * mengoreksi salah input data. Menghapus baris `users` akan meng-cascade ke
  * `students`, dan seterusnya ke penugasan wali, relasi orang tua, notifikasi,
  * dsb (semua onDelete: cascade di schema).
  *
- * PENGAMANAN: jika siswa sudah punya jurnal, penghapusan ditolak (409) agar
- * data karakter/nilai tidak ikut terhapus tanpa disadari. Siswa yang baru
+ * PENGAMANAN: jika murid sudah punya jurnal, penghapusan ditolak (409) agar
+ * data karakter/nilai tidak ikut terhapus tanpa disadari. Murid yang baru
  * salah-input (belum mengisi jurnal) tetap bisa dihapus.
  */
 studentsRoute.delete(
@@ -325,7 +325,7 @@ studentsRoute.delete(
     const [student] = await db.select().from(students).where(eq(students.id, id));
     if (!student) {
       return c.json(
-        { error: "not_found", message: "Peserta didik tidak ditemukan", statusCode: 404 },
+        { error: "not_found", message: "Murid tidak ditemukan", statusCode: 404 },
         404
       );
     }
@@ -340,7 +340,7 @@ studentsRoute.delete(
         {
           error: "conflict",
           message:
-            "Peserta didik ini sudah punya jurnal, jadi datanya tidak bisa dihapus demi menjaga riwayat pengisian dan nilai.",
+            "Murid ini sudah punya jurnal, jadi datanya tidak bisa dihapus demi menjaga riwayat pengisian dan nilai.",
           statusCode: 409,
         },
         409
@@ -371,7 +371,7 @@ const bulkDeleteSchema = z.object({
 });
 
 /**
- * POST /students/bulk-delete - hapus banyak peserta didik sekaligus
+ * POST /students/bulk-delete - hapus banyak murid sekaligus
  * berdasarkan daftar NISN (dari file Excel yang di-parse di browser,
  * pola sama dengan POST /students/bulk — lihat docs/bulk-import-export.md).
  *
@@ -380,10 +380,10 @@ const bulkDeleteSchema = z.object({
  *
  * Aturan per baris (independen, ringkasan sukses/gagal dikembalikan):
  * - NISN tidak ditemukan -> gagal (tidak menghentikan baris lain).
- * - Siswa sudah punya jurnal -> gagal (proteksi yang sama dengan
+ * - Murid sudah punya jurnal -> gagal (proteksi yang sama dengan
  *   DELETE /:id, menjaga riwayat pengisian dan nilai).
  * - Selain itu: hapus akun users -> cascade ke students & relasi
- *   turunannya, plus satu baris audit_logs per siswa terhapus.
+ *   turunannya, plus satu baris audit_logs per murid terhapus.
  */
 studentsRoute.post(
   "/bulk-delete",
@@ -463,14 +463,14 @@ studentsRoute.post(
 const graduateBulkSchema = z.object({
   schoolId: z.string().uuid(),
   gradeLevel: z.string().min(1).max(10), // mis. "IX" — satu angkatan penuh
-  // Siswa tinggal kelas / ditunda kelulusannya: dikecualikan per siswa.
+  // Murid tinggal kelas / ditunda kelulusannya: dikecualikan per murid.
   excludeStudentIds: z.array(z.string().uuid()).max(1000).optional(),
 });
 
 /**
  * POST /students/graduate-bulk - tandai SATU ANGKATAN sebagai lulus.
- * Pola laporan per baris sama dengan /students/bulk: tiap siswa diproses
- * independen + satu baris audit_logs per siswa. Siswa yang sudah nonaktif
+ * Pola laporan per baris sama dengan /students/bulk: tiap murid diproses
+ * independen + satu baris audit_logs per murid. Murid yang sudah nonaktif
  * tidak pernah terpilih (filter isActive=true di query).
  */
 studentsRoute.post(
@@ -564,7 +564,7 @@ const promoteBulkSchema = z
       )
       .min(1)
       .max(100),
-    // Siswa tinggal kelas: dikecualikan per siswa dari kenaikan massal.
+    // Murid tinggal kelas: dikecualikan per murid dari kenaikan massal.
     excludeStudentIds: z.array(z.string().uuid()).max(1000).optional(),
   })
   .superRefine((val, ctx) => {
@@ -592,7 +592,7 @@ const promoteBulkSchema = z
  * POST /students/promote-bulk - kenaikan kelas massal per pemetaan kelas.
  * Jalankan SETELAH graduate-bulk (angkatan tertinggi sudah nonaktif dan
  * tidak akan terpilih karena filter isActive=true). Laporan per baris +
- * audit_logs per siswa, pola sama dengan aksi massal lain.
+ * audit_logs per murid, pola sama dengan aksi massal lain.
  */
 studentsRoute.post(
   "/promote-bulk",

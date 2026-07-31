@@ -11,7 +11,7 @@ export default async function SiswaImporPage() {
 
   return (
     <div className="glass-panel max-w-2xl rounded-2xl p-6">
-      <h1 className="mb-1 text-xl font-semibold">Impor Peserta Didik dari Excel</h1>
+      <h1 className="mb-1 text-xl font-semibold">Impor Murid dari Excel</h1>
       <p className="mb-4 text-sm text-slate-500">
         Kolom yang dibutuhkan: <code>nisn, fullName, className</code>; opsional:
         <code> nis, gradeLevel, gender, birthDate</code>. Baris pertama harus berisi nama kolom ini

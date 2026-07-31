@@ -27,7 +27,7 @@ export default async function SiswaListPage({
 }: {
   searchParams: Promise<{ tampilkan?: string }>;
 }) {
-  // Default hanya siswa aktif; ?tampilkan=semua menyertakan alumni/nonaktif
+  // Default hanya murid aktif; ?tampilkan=semua menyertakan alumni/nonaktif
   // (fitur Kelulusan — alumni tidak dihapus, hanya disembunyikan).
   const { tampilkan } = await searchParams;
   const showAll = tampilkan === "semua";
@@ -39,7 +39,7 @@ export default async function SiswaListPage({
     <div className="glass-panel rounded-2xl p-6">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">Peserta Didik</h1>
+          <h1 className="text-xl font-semibold">Murid</h1>
           <Link
             href={showAll ? "/dashboard/admin/siswa" : "/dashboard/admin/siswa?tampilkan=semua"}
             className="text-xs text-brand-600 hover:underline"
@@ -65,13 +65,13 @@ export default async function SiswaListPage({
             href="/dashboard/admin/siswa/baru"
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500"
           >
-            + Tambah Siswa
+            + Tambah Murid
           </Link>
         </div>
       </div>
 
       {students.length === 0 ? (
-        <p className="text-sm text-slate-500">Belum ada peserta didik terdaftar.</p>
+        <p className="text-sm text-slate-500">Belum ada murid terdaftar.</p>
       ) : (
         <table className="w-full text-left text-sm">
           <thead>

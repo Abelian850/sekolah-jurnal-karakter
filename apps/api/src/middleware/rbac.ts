@@ -39,7 +39,7 @@ export function requirePermission(permission: Permission) {
 }
 
 /**
- * Middleware khusus Guru Wali: memastikan siswa yang diakses benar-benar
+ * Middleware khusus Guru Wali: memastikan murid yang diakses benar-benar
  * berada dalam binaan Guru Wali yang sedang login, dengan mengecek tabel
  * teacher_student secara langsung di database (bukan hanya percaya JWT).
  * Ini adalah lapisan keamanan tambahan sesuai desain Fase 1 Bab 7:
@@ -78,7 +78,7 @@ export function requireOwnStudent() {
       return c.json(
         {
           error: "forbidden",
-          message: "Siswa ini bukan binaan Anda",
+          message: "Murid ini bukan binaan Anda",
           statusCode: 403,
         },
         403

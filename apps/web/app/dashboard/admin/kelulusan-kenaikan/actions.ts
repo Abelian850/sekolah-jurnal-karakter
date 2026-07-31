@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/api-client";
 /**
  * Server actions fitur Kelulusan & Kenaikan Kelas (lihat
  * docs/catatan-sesi-2026-07-11.md). Data alumni TIDAK dihapus — kelulusan
- * hanya menonaktifkan siswa + akun login + penugasan wali. Urutan tiap
+ * hanya menonaktifkan murid + akun login + penugasan wali. Urutan tiap
  * tahun ajaran baru: kelulusan dulu, baru kenaikan kelas.
  */
 

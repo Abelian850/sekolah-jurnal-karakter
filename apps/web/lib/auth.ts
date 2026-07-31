@@ -68,7 +68,7 @@ async function resolveProfile(
  * - per-akun  : 5 kegagalan / 15 menit — melindungi satu akun yang ditarget.
  * - per-IP    : 20 kegagalan / 15 menit — menahan credential stuffing lintas
  *               akun; longgar agar satu sekolah di balik NAT (satu IP publik)
- *               tidak saling mengunci hanya karena beberapa siswa salah ketik.
+ *               tidak saling mengunci hanya karena beberapa murid salah ketik.
  *
  * Kegagalan MEMBACA counter sengaja fail-open (login tetap diproses) agar
  * gangguan DB tidak mengunci semua pengguna; kegagalan MENULIS log tidak
@@ -156,8 +156,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           // Fail-open — lihat komentar di atas.
         }
 
-        // Identifier tanpa "@" diperlakukan sebagai NISN siswa ATAU NIP guru
-        // (pasca-Fase 6 siswa login dengan NISN; revisi Juli 2026 guru login
+        // Identifier tanpa "@" diperlakukan sebagai NISN murid ATAU NIP guru
+        // (pasca-Fase 6 murid login dengan NISN; revisi Juli 2026 guru login
         // dengan NIP). Resolusi lewat tabel students lalu teachers (sumber
         // kebenaran), BUKAN dengan menebak email "<nisn>@siswa.internal" /
         // "<nip>@guru.internal", agar akun lama yang emailnya bukan format

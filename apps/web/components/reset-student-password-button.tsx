@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import { resetStudentPassword } from "@/app/dashboard/admin/siswa/actions";
 
 /**
- * Tombol per-baris di daftar siswa: reset kata sandi kembali ke NISN.
- * Dipakai untuk siswa lama (dibuat sebelum konvensi login-NISN) atau siswa
+ * Tombol per-baris di daftar murid: reset kata sandi kembali ke NISN.
+ * Dipakai untuk murid lama (dibuat sebelum konvensi login-NISN) atau murid
  * yang lupa kata sandi.
  */
 export function ResetStudentPasswordButton({

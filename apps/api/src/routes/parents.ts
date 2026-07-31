@@ -33,7 +33,7 @@ parentsRoute.get(
 
 /**
  * POST /parents - membuat akun Orang Tua dan langsung menghubungkannya
- * ke satu atau lebih siswa (mis. ayah & ibu dari kakak-adik di sekolah
+ * ke satu atau lebih murid (mis. ayah & ibu dari kakak-adik di sekolah
  * yang sama) lewat tabel relasi student_parent.
  */
 parentsRoute.post(

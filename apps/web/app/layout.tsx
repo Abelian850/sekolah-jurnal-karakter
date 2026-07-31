@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Jurnal Karakter & Monitoring Peserta Didik",
+  title: "Jurnal Karakter & Monitoring Murid",
   description:
-    "Aplikasi jurnal karakter dan monitoring peserta didik berbasis Guru Wali, bukan Wali Kelas.",
+    "Aplikasi jurnal karakter dan monitoring murid berbasis Guru Wali lintas kelas dan angkatan.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

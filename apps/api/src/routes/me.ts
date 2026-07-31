@@ -31,7 +31,7 @@ const changePasswordSchema = z.object({
 /**
  * PATCH /me/password - ganti kata sandi mandiri (Fase 9, hardening).
  *
- * Latar: kata sandi awal guru = NIP dan siswa = NISN — keduanya bukan
+ * Latar: kata sandi awal guru = NIP dan murid = NISN — keduanya bukan
  * rahasia, sehingga SEMUA peran wajib bisa mengganti sandinya sendiri
  * tanpa bantuan Admin. Endpoint ini terbuka untuk semua user yang login
  * (cukup authMiddleware, tanpa cek permission).

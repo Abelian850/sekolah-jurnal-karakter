@@ -31,7 +31,7 @@ export function ExportStudentsButton({ students }: { students: Student[] }) {
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Peserta Didik");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Murid");
     XLSX.writeFile(workbook, `peserta-didik-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 

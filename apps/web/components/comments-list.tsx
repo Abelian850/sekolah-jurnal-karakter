@@ -11,7 +11,7 @@ const ROLE_LABEL: Record<string, string> = {
   orang_tua: "Orang Tua",
   guru_wali: "Guru Wali",
   guru: "Guru",
-  peserta_didik: "Peserta Didik",
+  peserta_didik: "Murid",
   kepala_sekolah: "Kepala Sekolah",
   admin: "Admin",
 };
@@ -26,7 +26,7 @@ function formatDateTimeID(iso: string) {
 
 /**
  * Daftar komentar read-only (Fase 7). Dipakai di halaman periksa Guru Wali
- * dan detail riwayat siswa; form KIRIM komentar hanya ada di dashboard
+ * dan detail riwayat murid; form KIRIM komentar hanya ada di dashboard
  * Orang Tua (satu-satunya role dengan COMMENT_CREATE).
  */
 export function CommentsList({ comments }: { comments: CommentData[] }) {

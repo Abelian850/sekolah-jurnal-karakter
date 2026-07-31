@@ -36,7 +36,7 @@ export const PERMISSIONS = {
   BACKUP_RESTORE: "backup:restore",
   AUDIT_LOG_VIEW: "audit_log:view",
   SCHOOL_ANALYTICS_VIEW: "analytics:view",
-  STUDENT_LIST_OWN: "student:list_own", // Guru Wali - hanya siswa binaan
+  STUDENT_LIST_OWN: "student:list_own", // Guru Wali - hanya murid perwalian
   JOURNAL_FILL: "journal:fill",
   JOURNAL_VERIFY: "journal:verify",
   JOURNAL_VIEW_OWN: "journal:view_own",

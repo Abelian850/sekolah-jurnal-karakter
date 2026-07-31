@@ -38,7 +38,7 @@ export function EvidenceRequirementForm({
     startTransition(async () => {
       try {
         await setEvidenceRequirement(date, selected);
-        setMessage("Tersimpan. Berlaku untuk semua siswa binaan Anda pada tanggal ini.");
+        setMessage("Tersimpan. Berlaku untuk semua murid perwalian Anda pada tanggal ini.");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Gagal menyimpan.");
       }
@@ -53,7 +53,7 @@ export function EvidenceRequirementForm({
         await clearEvidenceRequirement(date);
         setSelected(null);
         setMessage(
-          "Pilihan dihapus. Siswa tetap wajib melampirkan satu foto, pada kebiasaan mana pun."
+          "Pilihan dihapus. Murid tetap wajib melampirkan satu foto, pada kebiasaan mana pun."
         );
       } catch (err) {
         setError(err instanceof Error ? err.message : "Gagal menghapus.");

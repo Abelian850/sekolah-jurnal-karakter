@@ -9,7 +9,7 @@ import { FIXED_JOURNAL_ITEM_NAMES } from "./journal-items";
  * dengan tampilan lama - TIDAK dimigrasikan.
  *
  * Dipakai di:
- * - apps/web components/journal-items-form.tsx : render form siswa.
+ * - apps/web components/journal-items-form.tsx : render form murid.
  * - apps/web components/journal-items-view.tsx : render jawaban (read-only).
  * - apps/api routes/journals.ts : validasi submit + derivasi status item.
  *
@@ -310,7 +310,7 @@ export function missingRequiredQuestions(
  * Derivasi status item untuk badge & analytics: "selesai" | "belum".
  * "sebagian" sengaja tidak pernah dihasilkan lagi. Kondisi doneWhen yang
  * pertanyaannya sedang TIDAK tampil (mis. sholat saat agama non-Islam)
- * diabaikan - sehingga siswa non-Islam dinilai dari isian ibadahnya.
+ * diabaikan - sehingga murid non-Islam dinilai dari isian ibadahnya.
  */
 export function deriveHabitStatus(
   set: HabitQuestionSet,

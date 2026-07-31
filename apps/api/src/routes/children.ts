@@ -154,7 +154,7 @@ const createCommentSchema = z.object({ body: z.string().trim().min(1).max(2000) 
 
 /**
  * POST /children/journals/:id/comments - tulis komentar pada jurnal anak.
- * Efek samping: notifikasi tipe "komentar" ke siswa pemilik jurnal dan ke
+ * Efek samping: notifikasi tipe "komentar" ke murid pemilik jurnal dan ke
  * Guru Wali AKTIF anak tsb (agar terlihat saat memeriksa jurnal).
  */
 childrenRoute.post(
@@ -179,7 +179,7 @@ childrenRoute.post(
       .values({ journalId: row.journal.id, userId: user.sub, body })
       .returning();
 
-    // ---------- Notifikasi: siswa + guru wali aktif ----------
+    // ---------- Notifikasi: murid + guru wali aktif ----------
     const [studentUser] = await db
       .select({ userId: students.userId })
       .from(students)

@@ -9,7 +9,7 @@
  */
 export interface FixedJournalItem {
   name: string;
-  /** Keterangan contoh yang tampil ke siswa saat mengisi jurnal. */
+  /** Keterangan contoh yang tampil ke murid saat mengisi jurnal. */
   description: string;
 }
 

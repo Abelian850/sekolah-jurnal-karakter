@@ -61,7 +61,7 @@ export default async function RiwayatVerifikasiPage() {
           <thead>
             <tr className="border-b border-slate-200 text-slate-500 dark:border-slate-700">
               <th className="py-2">Tanggal Jurnal</th>
-              <th className="py-2">Siswa</th>
+              <th className="py-2">Murid</th>
               <th className="py-2">Hasil</th>
               <th className="py-2">Nilai</th>
               <th className="py-2">Aksi</th>

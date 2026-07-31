@@ -1,5 +1,5 @@
 /**
- * Kartu "Siswa Terajin" — daftar siswa dengan pengisian jurnal terbanyak
+ * Kartu "Murid Terajin" — daftar murid dengan pengisian jurnal terbanyak
  * (status submitted/approved) pada periode `days` hari. Dipakai dashboard
  * Kepala Sekolah (/analytics/top-students) dan Admin
  * (/analytics/admin-top-students). Komponen presentasional murni (server
@@ -30,9 +30,9 @@ export function TopStudentsCard({
 
   return (
     <div className="glass-panel rounded-2xl p-6">
-      <h2 className="mb-1 text-base font-semibold">Siswa Terajin</h2>
+      <h2 className="mb-1 text-base font-semibold">Murid Terajin</h2>
       <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-        Peserta didik dengan pengisian jurnal terbanyak (terkirim &amp; disetujui) dalam {days}{" "}
+        Murid dengan pengisian jurnal terbanyak (terkirim &amp; disetujui) dalam {days}{" "}
         hari terakhir.
       </p>
       {students.length === 0 ? (

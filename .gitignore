@@ -41,8 +41,12 @@ drizzle/meta/_journal.json.bak
 *.tsbuildinfo
 tsconfig.sandbox.json
 
-# File Excel berisi data pribadi siswa - JANGAN PERNAH di-commit ke repo
+# File Excel berisi data pribadi murid - JANGAN PERNAH di-commit ke repo
 # publik (nama, NISN = data pribadi anak). Template xlsx di docs/templates/
 # tetap boleh karena hanya berisi contoh fiktif.
 /*.xlsx
+# Folder kerja impor berisi data murid/guru asli - ikut dikecualikan karena
+# aturan /*.xlsx di atas TIDAK menjangkau file di dalam subfolder.
+/Impor */
+/Impor*/
 drizzle/meta/*.bak

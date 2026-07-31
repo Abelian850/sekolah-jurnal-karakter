@@ -30,12 +30,12 @@ import type { Env, Variables } from "../index";
 export const journalsRoute = new Hono<{ Bindings: Env; Variables: Variables }>();
 
 /**
- * Modul jurnal harian milik Peserta Didik (Fase 5).
+ * Modul jurnal harian milik Murid (Fase 5).
  * Prinsip keamanan: SEMUA handler menurunkan kepemilikan dari database
  * (users.id pada JWT -> students.userId), tidak pernah menerima studentId
  * dari klien. requireOwnStudent() di rbac.ts TIDAK dipakai karena middleware
- * itu khusus relasi Guru Wali -> siswa binaan; di sini relasinya adalah
- * "user ini ADALAH siswa itu sendiri".
+ * itu khusus relasi Guru Wali -> murid perwalian; di sini relasinya adalah
+ * "user ini ADALAH murid itu sendiri".
  */
 
 /** Baris students milik user yang sedang login, atau undefined. */
@@ -47,7 +47,7 @@ async function findOwnStudent(db: Database, userId: string) {
 /**
  * Jurnal milik user yang sedang login. Not-found dan bukan-milikmu sengaja
  * disatukan menjadi satu hasil "tidak ketemu" (nantinya 404) agar tidak
- * membocorkan keberadaan jurnal siswa lain.
+ * membocorkan keberadaan jurnal murid lain.
  */
 async function findOwnJournal(db: Database, userId: string, journalId: string) {
   const [row] = await db
@@ -127,7 +127,7 @@ async function listJournalItems(db: Database, journalId: string) {
 
 /**
  * Hasil verifikasi Guru Wali untuk satu jurnal (atau null). Disertakan di
- * respons detail jurnal agar siswa bisa melihat nilai karakter & catatan,
+ * respons detail jurnal agar murid bisa melihat nilai karakter & catatan,
  * termasuk catatan revisi saat jurnal dikembalikan menjadi draft (Fase 6).
  */
 async function findVerification(db: Database, journalId: string) {
@@ -141,7 +141,7 @@ async function findVerification(db: Database, journalId: string) {
 /**
  * Daftar kebiasaan wajib berbukti foto untuk satu jurnal (revisi Juli 2026).
  * Prioritas (keputusan desain):
- * 1. Bukti Harian yang ditetapkan Guru Wali AKTIF siswa untuk tanggal itu
+ * 1. Bukti Harian yang ditetapkan Guru Wali AKTIF murid untuk tanggal itu
  *    (evidence_requirements) - jika ada, HANYA itu yang berlaku (menang
  *    atas default template). Diturunkan dari teacher_student (isActive),
  *    bukan dari klien.
@@ -203,7 +203,7 @@ async function findEvidenceRequirements(
 
 const notFoundStudent = {
   error: "not_found",
-  message: "Profil peserta didik untuk akun ini tidak ditemukan. Hubungi Admin sekolah.",
+  message: "Profil murid untuk akun ini tidak ditemukan. Hubungi Admin sekolah.",
   statusCode: 404,
 } as const;
 
@@ -386,7 +386,7 @@ const statsQuerySchema = z.object({
 
 /**
  * GET /journals/stats?date=YYYY-MM-DD&month=YYYY-MM&days=30
- * Data dashboard Peserta Didik (kalender + diagram):
+ * Data dashboard Murid (kalender + diagram):
  * - distribution : status jurnal milik sendiri `days` hari terakhir
  * - avgScore     : rata-rata nilai karakter `days` hari terakhir (atau null)
  * - scoreTrend   : 7 hari terakhir, nilai karakter per tanggal (null = belum dinilai)
@@ -526,7 +526,7 @@ journalsRoute.get(
       journal.journalDate,
       journal.journalTemplateId
     );
-    // Komentar orang tua (Fase 7) ikut ditampilkan ke siswa pemilik jurnal.
+    // Komentar orang tua (Fase 7) ikut ditampilkan ke murid pemilik jurnal.
     const commentList = await listComments(db, journal.id);
     return c.json({
       data: {

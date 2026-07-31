@@ -16,14 +16,14 @@ import Link from "next/link";
 
 const ROLES = [
   {
-    title: "Peserta Didik",
+    title: "Murid",
     desc: "Mengisi jurnal 7 Kebiasaan setiap hari, melampirkan foto bukti, memantau status verifikasi dan nilai, serta menerima notifikasi komentar.",
     icon: "📝",
     accent: "bg-blue-50 text-blue-600 ring-blue-100 dark:bg-blue-950/40 dark:text-blue-400 dark:ring-blue-900",
   },
   {
     title: "Guru Wali",
-    desc: "Membina siswa lintas kelas dan angkatan: menetapkan kebiasaan berbukti harian, memverifikasi jurnal (setujui/revisi/tolak), dan memberi nilai 1–100.",
+    desc: "Membina murid lintas kelas dan angkatan: menetapkan kebiasaan berbukti harian, memverifikasi jurnal (setujui/revisi/tolak) dengan nilai yang dihitung otomatis.",
     icon: "✅",
     accent: "bg-emerald-50 text-emerald-600 ring-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400 dark:ring-emerald-900",
   },
@@ -35,7 +35,7 @@ const ROLES = [
   },
   {
     title: "Orang Tua",
-    desc: "Melihat riwayat dan detail jurnal anak, lalu berkomentar langsung — siswa dan guru wali otomatis menerima notifikasi.",
+    desc: "Melihat riwayat dan detail jurnal anak, lalu berkomentar langsung — murid dan guru wali otomatis menerima notifikasi.",
     icon: "💬",
     accent: "bg-amber-50 text-amber-600 ring-amber-100 dark:bg-amber-950/40 dark:text-amber-400 dark:ring-amber-900",
   },
@@ -59,16 +59,16 @@ const HABITS = [
 
 const STEPS = [
   {
-    title: "Siswa mengisi jurnal",
-    desc: "Setiap hari siswa mencatat ketujuh kebiasaan — status “Belum” wajib berketerangan — dan melampirkan satu foto bukti.",
+    title: "Murid mengisi jurnal",
+    desc: "Setiap hari murid mencatat ketujuh kebiasaan — status “Belum” wajib berketerangan — dan melampirkan satu foto bukti.",
   },
   {
     title: "Guru wali memverifikasi",
-    desc: "Guru wali memeriksa jurnal siswa binaannya, menyetujui / meminta revisi / menolak, lalu memberi nilai karakter.",
+    desc: "Guru wali memeriksa jurnal murid perwaliannya, menyetujui / meminta revisi / menolak — nilai karakter terhitung otomatis.",
   },
   {
     title: "Orang tua mendampingi",
-    desc: "Orang tua membaca jurnal anak dan meninggalkan komentar; notifikasi terkirim otomatis ke siswa dan guru wali.",
+    desc: "Orang tua membaca jurnal anak dan meninggalkan komentar; notifikasi terkirim otomatis ke murid dan guru wali.",
   },
   {
     title: "Kepala sekolah memantau",
@@ -78,16 +78,16 @@ const STEPS = [
 
 const FAQS = [
   {
-    q: "Apa bedanya Guru Wali dengan Wali Kelas?",
-    a: "Guru Wali membina peserta didik secara personal lintas kelas dan angkatan. Penugasannya dapat berubah kapan saja tanpa mengubah data siswa — berbeda dengan Wali Kelas yang terikat pada satu kelas.",
+    q: "Apa itu Guru Wali?",
+    a: "Guru Wali membina murid secara personal lintas kelas dan angkatan. Penugasannya dapat berubah kapan saja tanpa mengubah data murid, dan tidak terikat pada satu kelas.",
   },
   {
-    q: "Bagaimana peserta didik masuk ke sistem?",
-    a: "Peserta didik masuk memakai NISN sebagai username sekaligus kata sandi awal, lalu disarankan mengganti kata sandi. Peran lain masuk dengan email yang didaftarkan Admin.",
+    q: "Bagaimana murid masuk ke sistem?",
+    a: "Murid masuk memakai NISN sebagai username sekaligus kata sandi awal, lalu disarankan mengganti kata sandi. Peran lain masuk dengan email yang didaftarkan Admin.",
   },
   {
     q: "Apakah foto bukti wajib setiap hari?",
-    a: "Ya, minimal satu foto per hari. Guru wali dapat menetapkan kebiasaan tertentu yang wajib berfoto pada tanggal tertentu; jika tidak ditetapkan, siswa bebas memilih kebiasaan mana pun untuk difoto.",
+    a: "Ya, minimal satu foto per hari. Guru wali dapat menetapkan kebiasaan tertentu yang wajib berfoto pada tanggal tertentu; jika tidak ditetapkan, murid bebas memilih kebiasaan mana pun untuk difoto.",
   },
   {
     q: "Apakah data antar sekolah terpisah?",
@@ -129,12 +129,6 @@ export default function LandingPage() {
             <a href="#faq" className="hidden text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 sm:inline">
               FAQ
             </a>
-            <Link
-              href="/login"
-              className="rounded-full bg-brand-600 px-4 py-1.5 font-medium text-white shadow-sm transition hover:bg-brand-500 hover:shadow"
-            >
-              Masuk
-            </Link>
           </nav>
         </div>
       </header>
@@ -157,33 +151,36 @@ export default function LandingPage() {
           />
           <div className="mx-auto max-w-6xl px-6 pb-24 pt-28 text-center">
             <LogoMark size={72} className="mx-auto mb-6 ring-2 ring-white/30" />
-            <p className="mx-auto mb-6 flex w-fit items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1 text-xs font-medium text-brand-100 shadow-sm backdrop-blur">
+            <p className="mx-auto mb-4 flex w-fit items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1 text-xs font-medium text-brand-100 shadow-sm backdrop-blur">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-200" />
               Mendukung Gerakan 7 Kebiasaan Anak Indonesia Hebat
+            </p>
+            <p className="mx-auto mb-6 max-w-2xl text-sm text-brand-100/90">
+              <span className="mb-0.5 block text-[11px] font-semibold uppercase tracking-wider text-brand-200/80">
+                Visi SMP Negeri 30 Semarang
+              </span>
+              <span className="italic">
+                “Terwujudnya Murid yang Berprestasi, Berkarakter, serta Peduli
+                Lingkungan”
+              </span>
             </p>
             <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight text-white sm:text-5xl">
               Jurnal Karakter &amp;{" "}
               <span className="bg-gradient-to-r from-brand-200 to-brand-500 bg-clip-text text-transparent">
-                Monitoring Peserta Didik
+                Monitoring Murid
               </span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-base text-slate-200 sm:text-lg">
               Satu platform bagi sekolah untuk menumbuhkan kebiasaan baik:
-              siswa mencatat, guru wali membina dan menilai, orang tua
+              murid mencatat, guru wali membina dan menilai, orang tua
               mendampingi, kepala sekolah memantau.
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/login"
-                className="rounded-full bg-brand-600 px-6 py-3 text-sm font-medium text-white shadow-md shadow-brand-600/20 transition hover:bg-brand-500 hover:shadow-lg hover:shadow-brand-600/30"
+                className="rounded-full bg-brand-600 px-8 py-3 text-sm font-medium text-white shadow-md shadow-brand-600/20 transition hover:bg-brand-500 hover:shadow-lg hover:shadow-brand-600/30"
               >
-                Isi Jurnal
-              </Link>
-              <Link
-                href="/login"
-                className="rounded-full border border-white/40 bg-white/10 px-6 py-3 text-sm font-medium text-white shadow-sm backdrop-blur transition hover:bg-white/20 hover:shadow-md"
-              >
-                Wali Kelas
+                Masuk
               </Link>
             </div>
           </div>
@@ -217,8 +214,8 @@ export default function LandingPage() {
             Satu aplikasi, lima peran
           </h2>
           <p className="mx-auto mt-3 max-w-2xl text-center text-sm text-slate-600 dark:text-slate-400">
-            Berbasis relasi Guru Wali ↔ Peserta Didik — guru wali dapat membina
-            siswa lintas kelas dan angkatan tanpa mengubah data siswa.
+            Berbasis relasi Guru Wali ↔ Murid — guru wali dapat membina
+            murid lintas kelas dan angkatan tanpa mengubah data murid.
           </p>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {ROLES.map((r) => (
@@ -297,7 +294,7 @@ export default function LandingPage() {
               Siap menumbuhkan kebiasaan baik di sekolah Anda?
             </h2>
             <p className="relative mx-auto mt-3 max-w-xl text-sm text-brand-100">
-              Masuk dengan akun yang diberikan Admin sekolah. Peserta didik
+              Masuk dengan akun yang diberikan Admin sekolah. Murid
               cukup memakai NISN.
             </p>
             <Link
@@ -315,7 +312,7 @@ export default function LandingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 text-xs text-slate-500 sm:flex-row">
           <span className="flex items-center gap-2">
             <LogoMark className="h-6 w-6 rounded-lg text-[11px]" />
-            Jurnal Karakter &amp; Monitoring Peserta Didik
+            Jurnal Karakter &amp; Monitoring Murid
           </span>
           <span>
             Dibangun dengan Next.js · Hono · Neon — di Cloudflare Workers

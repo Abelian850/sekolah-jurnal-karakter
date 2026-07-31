@@ -49,7 +49,7 @@ const ROLE_LABEL: Record<string, string> = {
   orang_tua: "Orang Tua",
   guru_wali: "Guru Wali",
   guru: "Guru",
-  peserta_didik: "Peserta Didik",
+  peserta_didik: "Murid",
   kepala_sekolah: "Kepala Sekolah",
   admin: "Admin",
 };

@@ -25,7 +25,7 @@ const ALLOWED_TYPES: Record<string, string> = {
   "image/webp": "webp",
 };
 
-// POST /files/journal-photo - Peserta Didik mengunggah foto bukti.
+// POST /files/journal-photo - Murid mengunggah foto bukti.
 filesRoute.post(
   "/journal-photo",
   authMiddleware,

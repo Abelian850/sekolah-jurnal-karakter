@@ -45,9 +45,9 @@ export interface BulkAssignResult {
 }
 
 /**
- * Penugasan massal (revisi Juli 2026): satu Guru Wali -> banyak siswa,
+ * Penugasan massal (revisi Juli 2026): satu Guru Wali -> banyak murid,
  * via multi-select (studentIds) dan/atau daftar NISN (nisns). Laporan
- * per baris; siswa yang sudah punya wali TIDAK dipindahkan (lihat
+ * per baris; murid yang sudah punya wali TIDAK dipindahkan (lihat
  * POST /teacher-student/bulk).
  */
 export async function bulkAssignGuruWali(input: {

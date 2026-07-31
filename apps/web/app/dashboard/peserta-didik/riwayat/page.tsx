@@ -47,7 +47,7 @@ export default async function RiwayatJurnalPage() {
 
       {profileMissing ? (
         <p className="text-sm text-slate-500">
-          Profil peserta didik untuk akun ini belum terdaftar. Hubungi Admin sekolah.
+          Profil murid untuk akun ini belum terdaftar. Hubungi Admin sekolah.
         </p>
       ) : journals.length === 0 ? (
         <p className="text-sm text-slate-500">Belum ada jurnal. Mulai dari halaman Jurnal Hari Ini.</p>

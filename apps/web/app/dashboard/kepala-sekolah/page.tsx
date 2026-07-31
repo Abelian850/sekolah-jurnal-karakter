@@ -101,7 +101,7 @@ export default async function KepalaSekolahDashboardPage() {
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
-        <StatCard label="Peserta Didik Aktif" value={counts.activeStudents} />
+        <StatCard label="Murid Aktif" value={counts.activeStudents} />
         <StatCard label="Guru" value={counts.teachers} />
         <StatCard label="Guru Wali" value={counts.guruWali} />
         <StatCard
@@ -114,7 +114,7 @@ export default async function KepalaSekolahDashboardPage() {
         <div className="glass-panel rounded-2xl p-6">
           <h2 className="mb-1 text-base font-semibold">Jurnal Hari Ini</h2>
           <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-            Status pengisian jurnal seluruh peserta didik aktif pada tanggal di atas.
+            Status pengisian jurnal seluruh murid aktif pada tanggal di atas.
           </p>
           <div className="flex flex-col gap-2.5">
             <Bar label="Disetujui" value={t.approved} total={counts.activeStudents} colorClass="bg-green-500" />
@@ -142,8 +142,8 @@ export default async function KepalaSekolahDashboardPage() {
       <div className="mb-6 glass-panel rounded-2xl p-6">
         <h2 className="mb-1 text-base font-semibold">Jurnal Terkirim 7 Hari Terakhir</h2>
         <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-          Jumlah jurnal yang dikirim siswa per hari (termasuk yang sudah diverifikasi),
-          dari total {counts.activeStudents} peserta didik aktif.
+          Jumlah jurnal yang dikirim murid per hari (termasuk yang sudah diverifikasi),
+          dari total {counts.activeStudents} murid aktif.
         </p>
         <div className="flex items-end gap-2" style={{ height: "8rem" }}>
           {trend.map((d) => (

@@ -8,7 +8,7 @@ import Link from "next/link";
  * Server Component murni - navigasi bulan memakai Link dengan query string
  * (?bulan=YYYY-MM) sehingga tidak butuh state di klien. Legenda dirender
  * oleh halaman pemakai lewat `children` karena arti warna berbeda per peran
- * (guru wali vs peserta didik).
+ * (guru wali vs murid).
  */
 
 export interface CalendarMark {

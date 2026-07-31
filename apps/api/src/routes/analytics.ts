@@ -25,9 +25,9 @@ export const analyticsRoute = new Hono<{ Bindings: Env; Variables: Variables }>(
  * - GET /analytics/admin-summary  (Admin - gabungan, atau difilter per sekolah)
  *
  * Isi ringkasan:
- * - counts       : siswa aktif, guru, guru wali
+ * - counts       : murid aktif, guru, guru wali
  * - today        : status jurnal pada `date` (draft/submitted/approved/rejected
- *                  + belum_membuat = siswa aktif tanpa jurnal)
+ *                  + belum_membuat = murid aktif tanpa jurnal)
  * - verification : distribusi hasil verifikasi `days` hari terakhir
  *                  (+ menunggu = submitted belum diverifikasi)
  * - avgScoreByClass / avgScore : rata-rata nilai karakter `days` hari terakhir
@@ -50,7 +50,7 @@ async function buildSummary(
     ? eq(students.schoolId, schoolId)
     : undefined;
 
-  // ---- Jumlah siswa aktif & guru ----
+  // ---- Jumlah murid aktif & guru ----
   const [studentCount] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(students)
@@ -272,8 +272,8 @@ analyticsRoute.get(
 );
 
 /**
- * Siswa paling rajin mengisi jurnal (rencana kerja 18 Juli — Prioritas 3).
- * Menghitung jurnal berstatus submitted/approved per siswa aktif dalam
+ * Murid paling rajin mengisi jurnal (rencana kerja 18 Juli — Prioritas 3).
+ * Menghitung jurnal berstatus submitted/approved per murid aktif dalam
  * rentang `days` hari berakhir di `date`, urut menurun. Draft & rejected
  * sengaja tidak dihitung: draft belum dikirim, rejected berarti isinya
  * tidak sah menurut Guru Wali. Tanpa perubahan skema — unique index
@@ -395,24 +395,24 @@ analyticsRoute.get(
  * GET /analytics/guru-wali-recap?from=YYYY-MM-DD&to=YYYY-MM-DD
  * (Guru Wali — rencana kerja 19 Juli, Prioritas 1).
  *
- * Rekap per siswa binaan AKTIF guru yang sedang login, untuk diunduh
+ * Rekap per murid perwalian AKTIF guru yang sedang login, untuk diunduh
  * sebagai Excel/PDF DI BROWSER (Workers tidak menggenerate file biner —
  * docs/bulk-import-export.md). Scoping identik dengan verifications.ts:
- * identitas guru diturunkan dari JWT (users.id -> teachers.userId), siswa
+ * identitas guru diturunkan dari JWT (users.id -> teachers.userId), murid
  * dibatasi lewat teacher_student.isActive — bukan dari parameter klien.
  *
  * Isi respons:
  * - meta        : nama sekolah, nama guru, periode, jumlah hari
- * - students    : per siswa — jumlah jurnal per status (draft/submitted/
+ * - students    : per murid — jumlah jurnal per status (draft/submitted/
  *                 approved/rejected), hari tanpa jurnal (totalDays dikurangi
  *                 seluruh jurnal; unique index (studentId, journalDate)
  *                 menjamin 1 jurnal/hari), rata-rata characterScore
  * - habits      : daftar 7 Kebiasaan (dari journal_template_items yang
  *                 muncul pada jurnal periode ini), urut orderIndex
- * - habitCounts : berapa kali tiap kebiasaan "selesai" per siswa. Hanya
+ * - habitCounts : berapa kali tiap kebiasaan "selesai" per murid. Hanya
  *                 jurnal submitted/approved yang dihitung — draft belum
  *                 dikirim, rejected berarti isinya tidak sah (rasional
- *                 sama dengan Siswa Terajin).
+ *                 sama dengan Murid Terajin).
  */
 analyticsRoute.get(
   "/guru-wali-recap",
@@ -471,7 +471,7 @@ analyticsRoute.get(
     );
     const rangeFilter = and(gte(journals.journalDate, from), lte(journals.journalDate, to));
 
-    // ---- Daftar siswa binaan aktif ----
+    // ---- Daftar murid perwalian aktif ----
     const studentRows = await db
       .select({
         studentId: students.id,
@@ -490,7 +490,7 @@ analyticsRoute.get(
       )
       .orderBy(students.className, students.fullName);
 
-    // ---- Jumlah jurnal per status per siswa ----
+    // ---- Jumlah jurnal per status per murid ----
     const statusRows = await db
       .select({
         studentId: journals.studentId,
@@ -502,7 +502,7 @@ analyticsRoute.get(
       .where(rangeFilter)
       .groupBy(journals.studentId, journals.status);
 
-    // ---- Rata-rata nilai karakter per siswa ----
+    // ---- Rata-rata nilai karakter per murid ----
     const scoreRows = await db
       .select({
         studentId: journals.studentId,
@@ -514,7 +514,7 @@ analyticsRoute.get(
       .where(and(isNotNull(verifications.characterScore), rangeFilter))
       .groupBy(journals.studentId);
 
-    // ---- 7 Kebiasaan "selesai" per siswa (hanya jurnal terkirim/disetujui) ----
+    // ---- 7 Kebiasaan "selesai" per murid (hanya jurnal terkirim/disetujui) ----
     const habitRows = await db
       .select({
         studentId: journals.studentId,

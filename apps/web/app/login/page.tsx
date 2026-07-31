@@ -46,7 +46,7 @@ export default function LoginPage() {
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[320px] bg-gradient-to-b from-brand-50 to-transparent dark:from-brand-900/20"
       />
       <p className="mb-6 text-center text-sm font-semibold tracking-tight">
-        Jurnal Karakter &amp; Monitoring Peserta Didik
+        Jurnal Karakter &amp; Monitoring Murid
       </p>
       <form
         onSubmit={handleSubmit}
@@ -64,7 +64,7 @@ export default function LoginPage() {
           placeholder="nama@sekolah.sch.id / NISN / NIP"
         />
         <p className="-mt-3 mb-3 text-xs text-slate-500">
-          Peserta didik: NISN sebagai username dan kata sandi awal. Guru: NIP sebagai username dan kata sandi awal.
+          Murid: NISN sebagai username dan kata sandi awal. Guru: NIP sebagai username dan kata sandi awal.
         </p>
 
         <label className="mb-1 block text-sm font-medium">Kata Sandi</label>

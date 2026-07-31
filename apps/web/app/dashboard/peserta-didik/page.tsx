@@ -63,9 +63,9 @@ export default async function PesertaDidikHomePage({
   if (!student || !stats) {
     return (
       <div className="glass-panel rounded-2xl p-6">
-        <h1 className="mb-2 text-xl font-semibold">Dashboard Peserta Didik</h1>
+        <h1 className="mb-2 text-xl font-semibold">Dashboard Murid</h1>
         <p className="text-sm text-slate-600 dark:text-slate-400">
-          Profil peserta didik untuk akun ini belum terdaftar. Hubungi Admin sekolah.
+          Profil murid untuk akun ini belum terdaftar. Hubungi Admin sekolah.
         </p>
       </div>
     );

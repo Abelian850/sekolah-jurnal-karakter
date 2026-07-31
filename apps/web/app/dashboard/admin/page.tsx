@@ -178,7 +178,7 @@ export default async function AdminOverviewPage({
       {/* Kartu statistik */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Peserta Didik Aktif"
+          label="Murid Aktif"
           value={counts.activeStudents}
           color="blue"
           icon={icons.students}
@@ -199,7 +199,7 @@ export default async function AdminOverviewPage({
         <div className="glass-panel rounded-2xl p-6">
           <h2 className="mb-1 text-lg font-semibold">Jurnal Hari Ini</h2>
           <p className="mb-5 text-sm text-slate-500 dark:text-slate-400">
-            Status pengisian jurnal seluruh peserta didik aktif hari ini.
+            Status pengisian jurnal seluruh murid aktif hari ini.
           </p>
           <div className="flex flex-col gap-3">
             <Bar label="Disetujui" value={t.approved} total={counts.activeStudents} colorClass="bg-green-500" />
@@ -228,8 +228,8 @@ export default async function AdminOverviewPage({
       <div className="glass-panel rounded-2xl p-6">
         <h2 className="mb-1 text-lg font-semibold">Performa Pengisian - 7 Hari Terakhir</h2>
         <p className="mb-5 text-sm text-slate-500 dark:text-slate-400">
-          Jumlah jurnal yang dikirim siswa per hari (termasuk yang sudah diverifikasi), dari
-          total {counts.activeStudents} peserta didik aktif.
+          Jumlah jurnal yang dikirim murid per hari (termasuk yang sudah diverifikasi), dari
+          total {counts.activeStudents} murid aktif.
         </p>
         <div className="flex items-end gap-2 sm:gap-3" style={{ height: "11rem" }}>
           {trend.map((d, i) => (
@@ -249,7 +249,7 @@ export default async function AdminOverviewPage({
         </div>
       </div>
 
-      {/* Siswa paling rajin mengisi jurnal */}
+      {/* Murid paling rajin mengisi jurnal */}
       <TopStudentsCard students={topStudents} days={30} />
 
       {/* Nilai karakter per kelas */}

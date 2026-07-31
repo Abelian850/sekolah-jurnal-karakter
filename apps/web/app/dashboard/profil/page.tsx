@@ -28,7 +28,7 @@ export default async function ProfilPage() {
         </Link>
         <h1 className="mb-1 text-xl font-bold">Ganti Kata Sandi</h1>
         <p className="mb-6 text-sm text-slate-500">
-          Kata sandi awal Anda (NIP untuk guru, NISN untuk peserta didik) bukan rahasia.
+          Kata sandi awal Anda (NIP untuk guru, NISN untuk murid) bukan rahasia.
           Segera ganti dengan kata sandi yang hanya Anda ketahui.
         </p>
         <ChangePasswordForm />

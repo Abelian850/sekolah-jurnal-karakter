@@ -44,7 +44,7 @@ export default async function AnakDetailPage({
 }) {
   const { studentId } = await params;
 
-  // Nama anak diambil dari daftar anak sendiri (bukan endpoint siswa umum)
+  // Nama anak diambil dari daftar anak sendiri (bukan endpoint murid umum)
   // agar tetap tunduk pada relasi student_parent di server.
   const children = await apiFetch<Child[]>("/children");
   const child = children.find((c) => c.id === studentId);

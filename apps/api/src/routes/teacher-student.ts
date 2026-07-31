@@ -17,8 +17,8 @@ const assignSchema = z.object({
 });
 
 /**
- * GET /teacher-student?studentId=... -> riwayat Guru Wali seorang siswa
- * GET /teacher-student?teacherId=...  -> daftar siswa binaan seorang Guru Wali
+ * GET /teacher-student?studentId=... -> riwayat Guru Wali seorang murid
+ * GET /teacher-student?teacherId=...  -> daftar murid perwalian seorang Guru Wali
  * Salah satu wajib diisi, tidak ada endpoint "list semua" karena datanya
  * historis dan bisa sangat besar tanpa filter.
  */
@@ -51,16 +51,16 @@ teacherStudentRoute.get(
 );
 
 /**
- * POST /teacher-student -> menugaskan (atau MEMINDAHKAN) Guru Wali seorang siswa.
+ * POST /teacher-student -> menugaskan (atau MEMINDAHKAN) Guru Wali seorang murid.
  *
  * Ini adalah implementasi konkret dari keputusan desain Fase 1: mengubah
  * Guru Wali TIDAK PERNAH menyentuh tabel `students`. Yang terjadi:
- *   1. Cari baris teacher_student aktif milik siswa ini pada tahun ajaran
+ *   1. Cari baris teacher_student aktif milik murid ini pada tahun ajaran
  *      yang sama (jika ada) -> tandai unassignedAt + isActive=false.
  *   2. Insert baris baru dengan Guru Wali yang baru.
  * Kedua operasi dijalankan berurutan (bukan satu transaksi interaktif,
  * lihat batasan Neon HTTP driver di user-provisioning.ts), tapi urutannya
- * aman: jika langkah 2 gagal, siswa hanya jadi tanpa Guru Wali sementara
+ * aman: jika langkah 2 gagal, murid hanya jadi tanpa Guru Wali sementara
  * (bukan data yang saling bertentangan/dua Guru Wali aktif sekaligus).
  */
 teacherStudentRoute.post(
@@ -75,14 +75,14 @@ teacherStudentRoute.post(
 
     // Alumni/siswa nonaktif tidak bisa ditugaskan ke Guru Wali (fitur
     // Kelulusan): riwayat binaan lama tetap tersimpan, tapi penugasan
-    // baru hanya untuk siswa aktif.
+    // baru hanya untuk murid aktif.
     const [targetStudent] = await db
       .select({ id: students.id, isActive: students.isActive, fullName: students.fullName })
       .from(students)
       .where(eq(students.id, body.studentId));
     if (!targetStudent) {
       return c.json(
-        { error: "not_found", message: "Peserta didik tidak ditemukan", statusCode: 404 },
+        { error: "not_found", message: "Murid tidak ditemukan", statusCode: 404 },
         404
       );
     }
@@ -113,7 +113,7 @@ teacherStudentRoute.post(
         return c.json(
           {
             error: "conflict",
-            message: "Siswa ini sudah dibina oleh Guru Wali yang sama pada tahun ajaran ini",
+            message: "Murid ini sudah dibina oleh Guru Wali yang sama pada tahun ajaran ini",
             statusCode: 409,
           },
           409
@@ -146,23 +146,23 @@ const bulkAssignSchema = z
   .object({
     teacherId: z.string().uuid(),
     academicYearId: z.string().uuid(),
-    /** Mode multi-select: id siswa dari daftar yang sudah dimuat. */
+    /** Mode multi-select: id murid dari daftar yang sudah dimuat. */
     studentIds: z.array(z.string().uuid()).max(500).optional(),
-    /** Mode upload/tempel: daftar NISN, dicocokkan ke database siswa. */
+    /** Mode upload/tempel: daftar NISN, dicocokkan ke database murid. */
     nisns: z.array(z.string().regex(NISN_REGEX, "NISN harus 5-30 digit angka")).max(500).optional(),
   })
   .refine((v) => (v.studentIds?.length ?? 0) + (v.nisns?.length ?? 0) > 0, {
-    message: "Isi studentIds atau nisns (minimal satu siswa)",
+    message: "Isi studentIds atau nisns (minimal satu murid)",
   });
 
 /**
- * POST /teacher-student/bulk -> menugaskan satu Guru Wali ke BANYAK siswa
+ * POST /teacher-student/bulk -> menugaskan satu Guru Wali ke BANYAK murid
  * sekaligus (revisi Juli 2026). Dua mode input yang bisa digabung:
  * multi-select (studentIds) dan upload/tempel daftar NISN (nisns) yang
- * dicocokkan ke database peserta didik.
+ * dicocokkan ke database murid.
  *
  * Berbeda dengan POST / (tunggal) yang MEMINDAHKAN penugasan lama, bulk
- * SENGAJA tidak pernah memindahkan: siswa yang sudah punya Guru Wali aktif
+ * SENGAJA tidak pernah memindahkan: murid yang sudah punya Guru Wali aktif
  * pada tahun ajaran tsb dilaporkan sebagai gagal per baris (bukan gagal
  * total, pola /teachers/bulk) supaya penugasan massal tidak diam-diam
  * merebut binaan guru lain. Pemindahan tetap lewat form tunggal.
@@ -188,7 +188,7 @@ teacherStudentRoute.post(
       );
     }
 
-    // Resolusi sekali jalan (hindari N query): siswa by id dan by NISN.
+    // Resolusi sekali jalan (hindari N query): murid by id dan by NISN.
     const byId =
       studentIds.length > 0
         ? await db
@@ -238,7 +238,7 @@ teacherStudentRoute.post(
             row: i + 1,
             identifier,
             success: false,
-            message: `${identifier} tidak ditemukan di database peserta didik`,
+            message: `${identifier} tidak ditemukan di database murid`,
           });
           continue;
         }
@@ -315,8 +315,8 @@ teacherStudentRoute.post(
 );
 
 /**
- * DELETE /teacher-student/:id -> melepas Guru Wali dari siswa tanpa
- * menugaskan penggantinya (mis. siswa pindah sekolah). Bersifat soft-delete
+ * DELETE /teacher-student/:id -> melepas Guru Wali dari murid tanpa
+ * menugaskan penggantinya (mis. murid pindah sekolah). Bersifat soft-delete
  * (isActive=false + unassignedAt) agar riwayat tetap tersimpan.
  */
 teacherStudentRoute.delete(

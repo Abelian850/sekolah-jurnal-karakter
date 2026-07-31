@@ -66,7 +66,7 @@ export function ChangePasswordForm() {
           className={inputClass}
         />
         <p className="mt-1 text-xs text-slate-500">
-          Jika belum pernah diganti: guru = NIP, peserta didik = NISN.
+          Jika belum pernah diganti: guru = NIP, murid = NISN.
         </p>
       </div>
       <div>

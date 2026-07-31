@@ -68,7 +68,7 @@ function buildMarks(calendar: GuruWaliStats["calendar"]): Record<string, Calenda
   return marks;
 }
 
-/** Label + warna badge status jurnal hari ini per siswa binaan. */
+/** Label + warna badge status jurnal hari ini per murid perwalian. */
 const STUDENT_STATUS_BADGE: Record<
   NonNullable<BinaanStudent["journalStatus"]> | "none",
   { label: string; colorClass: string }
@@ -145,7 +145,7 @@ export default async function GuruWaliDashboardPage({
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3">
-        <StatCard label="Siswa Binaan Aktif" value={stats.counts.activeStudents} />
+        <StatCard label="Murid perwalian Aktif" value={stats.counts.activeStudents} />
         <StatCard label="Menunggu Verifikasi" value={stats.counts.pending} />
         <StatCard label="Disetujui (30 hari)" value={v.disetujui} />
       </div>
@@ -154,7 +154,7 @@ export default async function GuruWaliDashboardPage({
         <div className="glass-panel rounded-2xl p-6">
           <h2 className="mb-1 text-base font-semibold">Kalender Jurnal Binaan</h2>
           <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-            Rekap status jurnal siswa binaan per tanggal. Arahkan kursor ke tanggal
+            Rekap status jurnal murid perwalian per tanggal. Arahkan kursor ke tanggal
             untuk melihat rinciannya.
           </p>
           <StatusCalendar
@@ -177,7 +177,7 @@ export default async function GuruWaliDashboardPage({
         <div className="glass-panel rounded-2xl p-6">
           <h2 className="mb-1 text-base font-semibold">Verifikasi 30 Hari Terakhir</h2>
           <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-            Hasil pemeriksaan jurnal siswa binaan Anda.
+            Hasil pemeriksaan jurnal murid perwalian Anda.
           </p>
           <div className="flex flex-col gap-2.5">
             <Bar label="Disetujui" value={v.disetujui} total={totalVerif} colorClass="bg-green-500" />
@@ -188,8 +188,8 @@ export default async function GuruWaliDashboardPage({
 
           <h2 className="mb-1 mt-8 text-base font-semibold">Jurnal Terkirim 7 Hari Terakhir</h2>
           <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-            Jumlah jurnal yang dikirim siswa binaan per hari, dari total{" "}
-            {stats.counts.activeStudents} siswa.
+            Jumlah jurnal yang dikirim murid perwalian per hari, dari total{" "}
+            {stats.counts.activeStudents} murid.
           </p>
           <div className="flex items-end gap-2" style={{ height: "7rem" }}>
             {stats.trend.map((d) => (
@@ -215,14 +215,14 @@ export default async function GuruWaliDashboardPage({
       </div>
 
       <div className="glass-panel mb-6 rounded-2xl p-6">
-        <h2 className="mb-1 text-base font-semibold">Siswa Binaan Anda</h2>
+        <h2 className="mb-1 text-base font-semibold">Murid perwalian Anda</h2>
         <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
-          Daftar siswa binaan aktif beserta status jurnal mereka hari ini.
+          Daftar murid perwalian aktif beserta status jurnal mereka hari ini.
         </p>
 
         {binaanStudents.length === 0 ? (
           <p className="text-sm text-slate-500">
-            Belum ada siswa binaan yang ditugaskan ke Anda. Hubungi Admin sekolah.
+            Belum ada murid perwalian yang ditugaskan ke Anda. Hubungi Admin sekolah.
           </p>
         ) : (
           <table className="w-full text-left text-sm">
@@ -258,7 +258,7 @@ export default async function GuruWaliDashboardPage({
       <div className="glass-panel rounded-2xl p-6">
         <h2 className="mb-1 text-base font-semibold">Menunggu Verifikasi</h2>
         <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
-          Jurnal siswa binaan yang sudah dikirim dan menunggu diperiksa, terlama dulu.
+          Jurnal murid perwalian yang sudah dikirim dan menunggu diperiksa, terlama dulu.
         </p>
 
         {journals.length === 0 ? (
@@ -270,7 +270,7 @@ export default async function GuruWaliDashboardPage({
             <thead>
               <tr className="border-b border-slate-200 text-slate-500 dark:border-slate-700">
                 <th className="py-2">Tanggal Jurnal</th>
-                <th className="py-2">Siswa</th>
+                <th className="py-2">Murid</th>
                 <th className="py-2">Kelas</th>
                 <th className="py-2">Aksi</th>
               </tr>

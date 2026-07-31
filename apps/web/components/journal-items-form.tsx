@@ -32,7 +32,7 @@ const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // selaras batas keras di API
 /**
  * Kompres foto di browser sebelum diunggah: sisi terpanjang maks 1600px,
  * JPEG kualitas 0.8 - foto kamera HP 3-8MB menjadi +-200-400KB sehingga
- * hemat kuota siswa & penyimpanan R2. Jika browser tidak bisa mendekode
+ * hemat kuota murid & penyimpanan R2. Jika browser tidak bisa mendekode
  * file (format asing), pakai file asli selama tipe & ukurannya masih sah.
  */
 async function compressImage(file: File): Promise<Blob> {
@@ -129,7 +129,7 @@ function ItemRow({
   const [recordedTime, setRecordedTime] = useState(item.recordedTime?.slice(0, 5) ?? "");
   const [note, setNote] = useState(item.note ?? "");
   const [photoUrl, setPhotoUrl] = useState(item.photoUrl ?? "");
-  // Mode "unggah" jadi bawaan (paling ramah untuk siswa); "tautan"
+  // Mode "unggah" jadi bawaan (paling ramah untuk murid); "tautan"
   // dipertahankan untuk foto yang sudah ada di layanan lain.
   const [photoMode, setPhotoMode] = useState<"unggah" | "tautan">(() =>
     item.photoUrl && !item.photoUrl.startsWith("/api/foto/") ? "tautan" : "unggah"

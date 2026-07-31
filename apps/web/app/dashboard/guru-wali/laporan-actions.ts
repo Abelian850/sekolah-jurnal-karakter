@@ -7,7 +7,7 @@ import { apiFetch } from "@/lib/api-client";
  * 19 Juli, Prioritas 1). Hanya MENGAMBIL data — file Excel/PDF digenerate
  * DI BROWSER oleh components/download-guru-wali-report.tsx (Workers tidak
  * cocok menggenerate file biner, lihat docs/bulk-import-export.md).
- * Scoping siswa binaan terjadi di API (JWT -> teachers -> teacher_student).
+ * Scoping murid perwalian terjadi di API (JWT -> teachers -> teacher_student).
  */
 
 export interface RecapStudent {

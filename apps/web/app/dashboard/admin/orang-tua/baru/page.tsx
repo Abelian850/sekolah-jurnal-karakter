@@ -36,7 +36,7 @@ export default async function OrangTuaBaruPage() {
 
       {students.length === 0 ? (
         <p className="text-sm text-slate-500">
-          Belum ada peserta didik. Tambahkan siswa terlebih dahulu sebelum membuat akun orang tua.
+          Belum ada murid. Tambahkan murid terlebih dahulu sebelum membuat akun orang tua.
         </p>
       ) : (
         <form action={createParent} className="flex flex-col gap-4">
@@ -65,7 +65,7 @@ export default async function OrangTuaBaruPage() {
 
           <div>
             <label className="mb-1 block text-sm font-medium">
-              Peserta Didik Terkait (bisa lebih dari satu, mis. kakak-adik)
+              Murid Terkait (bisa lebih dari satu, mis. kakak-adik)
             </label>
             <select
               name="studentIds"

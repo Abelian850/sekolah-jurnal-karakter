@@ -26,7 +26,7 @@ export const journalTemplatesRoute = new Hono<{ Bindings: Env; Variables: Variab
  * - Setiap template WAJIB memuat 7 item tetap (FIXED_JOURNAL_ITEMS di
  *   packages/shared) - divalidasi saat create; item tetap tidak boleh
  *   dihapus dari template.
- * - Item punya `description` (keterangan contoh untuk siswa) dan
+ * - Item punya `description` (keterangan contoh untuk murid) dan
  *   `requiresPhoto` (default butuh bukti foto; Bukti Harian per-tanggal
  *   tetap menang - lihat routes/journals.ts).
  */
@@ -78,7 +78,7 @@ const notFoundTemplate = {
 
 /**
  * Deteksi pelanggaran FK RESTRICT dari Postgres (code 23503), misalnya
- * menghapus template/item yang sudah direferensikan oleh jurnal siswa.
+ * menghapus template/item yang sudah direferensikan oleh jurnal murid.
  */
 function isFkViolation(err: unknown): boolean {
   return (
@@ -326,7 +326,7 @@ const updateItemSchema = z
  * PATCH /:id/items/:itemId - ubah keterangan contoh dan/atau penanda
  * butuh bukti foto. Nama & tipe item sengaja TIDAK bisa diubah di sini:
  * item tetap (7 kebiasaan) tidak boleh berganti nama, dan mengganti nama
- * item lain yang sudah dipakai jurnal siswa akan mengubah makna data lama.
+ * item lain yang sudah dipakai jurnal murid akan mengubah makna data lama.
  */
 journalTemplatesRoute.patch(
   "/:id/items/:itemId",
@@ -429,7 +429,7 @@ journalTemplatesRoute.delete(
           {
             error: "conflict",
             message:
-              "Item ini sudah dipakai pada jurnal siswa sehingga tidak bisa dihapus. Nonaktifkan template dan buat template baru jika susunan item perlu diubah.",
+              "Item ini sudah dipakai pada jurnal murid sehingga tidak bisa dihapus. Nonaktifkan template dan buat template baru jika susunan item perlu diubah.",
             statusCode: 409,
           },
           409
@@ -473,7 +473,7 @@ journalTemplatesRoute.delete(
           {
             error: "conflict",
             message:
-              "Template ini sudah dipakai oleh jurnal siswa sehingga tidak bisa dihapus. Gunakan tombol nonaktifkan/aktifkan template lain sebagai gantinya.",
+              "Template ini sudah dipakai oleh jurnal murid sehingga tidak bisa dihapus. Gunakan tombol nonaktifkan/aktifkan template lain sebagai gantinya.",
             statusCode: 409,
           },
           409

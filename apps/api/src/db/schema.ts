@@ -17,7 +17,7 @@ import { relations } from "drizzle-orm";
 
 /**
  * Skema database sesuai ERD Fase 1 (lihat docs/erd.mermaid di dokumentasi Fase 1).
- * Relasi inti sistem: teacherStudent menghubungkan Guru Wali <-> Peserta Didik
+ * Relasi inti sistem: teacherStudent menghubungkan Guru Wali <-> Murid
  * secara independen dari kelas, dan bersifat historis (ada assignedAt/unassignedAt)
  * sehingga penggantian Guru Wali TIDAK PERNAH mengubah baris di tabel `students`.
  */
@@ -157,12 +157,12 @@ export const students = pgTable(
       .notNull()
       .references(() => schools.id, { onDelete: "cascade" }),
     // NIS (nomor induk internal sekolah) opsional sejak revisi Juli 2026 -
-    // identitas utama siswa adalah NISN. String kosong harus dinormalisasi
+    // identitas utama murid adalah NISN. String kosong harus dinormalisasi
     // ke NULL sebelum insert agar unique index (schoolId, nis) tidak bentrok.
     nis: varchar("nis", { length: 30 }),
     nisn: varchar("nisn", { length: 30 }),
     fullName: varchar("full_name", { length: 255 }).notNull(),
-    // className adalah ATRIBUT siswa, bukan foreign key ke guru mana pun.
+    // className adalah ATRIBUT murid, bukan foreign key ke guru mana pun.
     // Ini yang membuat Guru Wali bisa berganti tanpa menyentuh baris ini.
     className: varchar("class_name", { length: 20 }).notNull(), // "VII A"
     gradeLevel: varchar("grade_level", { length: 10 }).notNull(), // "VII"
@@ -173,15 +173,15 @@ export const students = pgTable(
     // Alasan status keaktifan (Kelulusan & Kenaikan Kelas): "aktif" |
     // "lulus" | "pindah" | "keluar". isActive tetap satu-satunya flag
     // operasional (login, filter); status hanya MEMBEDAKAN alumni dari
-    // siswa nonaktif sebab lain. Data alumni TIDAK PERNAH dihapus.
+    // murid nonaktif sebab lain. Data alumni TIDAK PERNAH dihapus.
     status: varchar("status", { length: 10 }).notNull().default("aktif"),
     graduatedAt: timestamp("graduated_at", { withTimezone: true }),
   },
   (table) => ({
     nisIdx: uniqueIndex("students_nis_idx").on(table.schoolId, table.nis),
-    // NISN unik nasional - dipakai sebagai username login siswa
+    // NISN unik nasional - dipakai sebagai username login murid
     // (pasca-Fase 6). Unique index Postgres mengizinkan banyak NULL,
-    // jadi data siswa lama tanpa NISN tidak melanggar constraint.
+    // jadi data murid lama tanpa NISN tidak melanggar constraint.
     nisnIdx: uniqueIndex("students_nisn_idx").on(table.nisn),
     classIdx: index("students_class_idx").on(table.className),
   })
@@ -215,11 +215,11 @@ export const studentParent = pgTable(
 );
 
 /**
- * TABEL RELASI INTI: Guru Wali <-> Peserta Didik.
+ * TABEL RELASI INTI: Guru Wali <-> Murid.
  * assignedAt/unassignedAt membuat relasi ini historis, sehingga:
  * 1. Memindahkan Guru Wali = insert baris baru + set unassignedAt pada baris lama.
- * 2. Data siswa (tabel students) tidak pernah perlu diubah saat Guru Wali berganti.
- * 3. Query "siapa Guru Wali siswa X saat ini" = WHERE studentId = X AND isActive = true.
+ * 2. Data murid (tabel students) tidak pernah perlu diubah saat Guru Wali berganti.
+ * 3. Query "siapa Guru Wali murid X saat ini" = WHERE studentId = X AND isActive = true.
  */
 export const teacherStudent = pgTable(
   "teacher_student",
@@ -261,7 +261,7 @@ export const journalTemplateItems = pgTable("journal_template_items", {
   itemName: varchar("item_name", { length: 255 }).notNull(),
   itemType: varchar("item_type", { length: 20 }).notNull(), // checklist|waktu|catatan|foto
   orderIndex: integer("order_index").notNull().default(0),
-  // Keterangan contoh yang tampil ke siswa saat mengisi jurnal
+  // Keterangan contoh yang tampil ke murid saat mengisi jurnal
   // (revisi Juli 2026, wajib terisi untuk 7 item tetap).
   description: text("description"),
   // Penanda item butuh bukti foto sebagai DEFAULT. Bukti Harian
@@ -288,7 +288,7 @@ export const journals = pgTable(
     submittedAt: timestamp("submitted_at", { withTimezone: true }),
   },
   (table) => ({
-    // Satu siswa hanya boleh punya satu jurnal per tanggal.
+    // Satu murid hanya boleh punya satu jurnal per tanggal.
     uniqueDaily: uniqueIndex("journals_student_date_idx").on(table.studentId, table.journalDate),
   })
 );
@@ -315,12 +315,12 @@ export const journalItems = pgTable("journal_items", {
 
 /**
  * Kebiasaan wajib berbukti foto per HARI, ditetapkan oleh Guru Wali untuk
- * seluruh siswa binaannya (requirement 7 Kebiasaan Anak Indonesia Hebat).
+ * seluruh murid binaannya (requirement 7 Kebiasaan Anak Indonesia Hebat).
  * - Satu baris per (guru, tanggal); ganti pilihan = UPSERT baris yang sama.
  * - Menunjuk journal_template_items (bukan journal_items) supaya berlaku
- *   untuk semua jurnal siswa binaan pada tanggal itu.
+ *   untuk semua jurnal murid perwalian pada tanggal itu.
  * - Jika tidak ada baris untuk tanggal tsb (guru belum/lupa menetapkan),
- *   fallback: siswa tetap wajib melampirkan minimal SATU foto pada
+ *   fallback: murid tetap wajib melampirkan minimal SATU foto pada
  *   kebiasaan mana pun (lihat validasi submit di routes/journals.ts).
  */
 export const evidenceRequirements = pgTable(
@@ -362,7 +362,7 @@ export const verifications = pgTable("verifications", {
 /**
  * Komentar pada jurnal (Fase 7). Ditulis oleh Orang Tua (COMMENT_CREATE)
  * pada jurnal anaknya; dibaca oleh Guru Wali saat verifikasi dan oleh
- * siswa pemilik jurnal. userId menunjuk users (bukan parents) supaya
+ * murid pemilik jurnal. userId menunjuk users (bukan parents) supaya
  * ke depan guru wali/siswa juga bisa membalas tanpa migrasi ulang.
  */
 export const comments = pgTable(

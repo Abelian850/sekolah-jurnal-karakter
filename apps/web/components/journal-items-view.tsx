@@ -60,7 +60,7 @@ function answerPairs(itemName: string, answers: Record<string, string>) {
 
 /**
  * Tampilan read-only item jurnal. Dipakai di halaman "Jurnal Hari Ini"
- * (setelah submit), detail riwayat siswa, verifikasi Guru Wali, dan detail
+ * (setelah submit), detail riwayat murid, verifikasi Guru Wali, dan detail
  * jurnal Orang Tua - satu komponen yang sama agar data yang dilihat semua
  * pihak konsisten. Item ber-answers dirender sebagai daftar tanya-jawab;
  * item lama (answers kosong) dirender gaya lama (status/waktu/keterangan).

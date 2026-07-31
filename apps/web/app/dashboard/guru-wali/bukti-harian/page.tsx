@@ -15,7 +15,7 @@ interface EvidenceRequirement {
 /**
  * Halaman "Bukti Harian" Guru Wali (7 Kebiasaan Anak Indonesia Hebat):
  * memilih SATU kebiasaan yang wajib disertai foto bukti hari ini untuk
- * semua siswa binaan. Tanggal lain bisa dipilih lewat ?date=YYYY-MM-DD
+ * semua murid perwalian. Tanggal lain bisa dipilih lewat ?date=YYYY-MM-DD
  * (input date di bawah melakukan navigasi GET biasa).
  */
 export default async function BuktiHarianPage({
@@ -44,8 +44,8 @@ export default async function BuktiHarianPage({
     <div className="glass-panel rounded-2xl p-6">
       <h1 className="mb-1 text-xl font-semibold">Bukti Harian</h1>
       <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
-        Pilih satu kebiasaan yang wajib disertai foto bukti oleh semua siswa binaan Anda pada
-        tanggal ini. Jika tidak dipilih, siswa tetap wajib melampirkan satu foto pada kebiasaan
+        Pilih satu kebiasaan yang wajib disertai foto bukti oleh semua murid perwalian Anda pada
+        tanggal ini. Jika tidak dipilih, murid tetap wajib melampirkan satu foto pada kebiasaan
         mana pun.
       </p>
 

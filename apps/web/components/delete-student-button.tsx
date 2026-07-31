@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import { deleteStudent } from "@/app/dashboard/admin/siswa/actions";
 
 /**
- * Tombol per-baris di daftar peserta didik: hapus siswa beserta akun
- * login-nya. Untuk mengoreksi salah input. API menolak (409) jika siswa
+ * Tombol per-baris di daftar murid: hapus murid beserta akun
+ * login-nya. Untuk mengoreksi salah input. API menolak (409) jika murid
  * sudah punya jurnal — pesan itu ditampilkan di sini. Pola sama dengan
  * reset-student-password-button.tsx.
  */
@@ -22,7 +22,7 @@ export function DeleteStudentButton({
   function handleClick() {
     if (
       !window.confirm(
-        `Hapus peserta didik "${studentName}" beserta akun login-nya? Tindakan ini tidak bisa dibatalkan.`
+        `Hapus murid "${studentName}" beserta akun login-nya? Tindakan ini tidak bisa dibatalkan.`
       )
     ) {
       return;

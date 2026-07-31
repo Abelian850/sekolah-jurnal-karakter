@@ -7,7 +7,7 @@ import type { Database } from "../db/client";
  * di-resolve dari tabel profil sesuai role (COALESCE lintas profil karena
  * comments.userId menunjuk users, bukan salah satu tabel profil).
  * Dipakai oleh: detail jurnal orang tua (children.ts), halaman periksa
- * guru wali (verifications.ts), dan detail jurnal siswa (journals.ts).
+ * guru wali (verifications.ts), dan detail jurnal murid (journals.ts).
  */
 export async function listComments(db: Database, journalId: string) {
   return db

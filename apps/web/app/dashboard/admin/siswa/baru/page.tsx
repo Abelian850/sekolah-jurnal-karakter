@@ -33,7 +33,7 @@ export default async function SiswaBaruPage() {
 
   return (
     <div className="glass-panel max-w-lg rounded-2xl p-6">
-      <h1 className="mb-4 text-xl font-semibold">Tambah Peserta Didik</h1>
+      <h1 className="mb-4 text-xl font-semibold">Tambah Murid</h1>
 
       <form action={createStudent} className="flex flex-col gap-4">
         <div>
@@ -118,7 +118,7 @@ export default async function SiswaBaruPage() {
         </div>
 
         <p className="rounded-lg bg-slate-50 p-3 text-xs text-slate-600 dark:bg-slate-800/50 dark:text-slate-400">
-          Akun login dibuat otomatis: siswa masuk dengan <strong>NISN</strong> sebagai
+          Akun login dibuat otomatis: murid masuk dengan <strong>NISN</strong> sebagai
           username sekaligus kata sandi awal. Tidak perlu mengisi email.
         </p>
 

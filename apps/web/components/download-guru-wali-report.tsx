@@ -8,7 +8,7 @@ import {
 } from "@/app/dashboard/guru-wali/laporan-actions";
 
 /**
- * Unduh laporan rekap jurnal siswa binaan (Guru Wali) dalam dua format
+ * Unduh laporan rekap jurnal murid perwalian (Guru Wali) dalam dua format
  * dari SATU endpoint yang sama (/analytics/guru-wali-recap):
  * - Excel : SheetJS — pola persis components/export-students-button.tsx.
  * - PDF   : jsPDF + jspdf-autotable, di-import DINAMIS di dalam handler
@@ -105,7 +105,7 @@ function habitTable(data: GuruWaliRecap): {
 function metaLines(data: GuruWaliRecap): string[] {
   return [
     data.meta.schoolName,
-    "Laporan Jurnal Karakter Siswa Binaan",
+    "Laporan Jurnal Karakter Murid perwalian",
     `Guru Wali: ${data.meta.teacherName}`,
     `Periode: ${formatShortID(data.meta.from)} s.d. ${formatShortID(data.meta.to)} (${data.meta.totalDays} hari)`,
   ];
@@ -188,7 +188,7 @@ export function DownloadGuruWaliReport() {
       const { from, to } = periodRange(month);
       const data = await getGuruWaliRecap(from, to);
       if (data.students.length === 0) {
-        setError("Tidak ada siswa binaan aktif untuk dilaporkan.");
+        setError("Tidak ada murid perwalian aktif untuk dilaporkan.");
         return;
       }
       if (format === "xlsx") buildExcel(data);
@@ -204,7 +204,7 @@ export function DownloadGuruWaliReport() {
     <div className="glass-panel rounded-2xl p-6">
       <h2 className="mb-1 text-base font-semibold">Unduh Laporan</h2>
       <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-        Rekap jurnal seluruh siswa binaan Anda pada satu bulan: jumlah jurnal per
+        Rekap jurnal seluruh murid perwalian Anda pada satu bulan: jumlah jurnal per
         status, hari tanpa jurnal, rata-rata nilai karakter, dan rekap 7 Kebiasaan.
       </p>
 

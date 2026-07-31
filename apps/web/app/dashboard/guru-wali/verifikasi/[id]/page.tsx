@@ -81,7 +81,7 @@ export default async function VerifikasiJurnalPage({
           {verification.note && <p className="mt-1 whitespace-pre-wrap">{verification.note}</p>}
           {journal.status === "submitted" && verification.status === "revisi" && (
             <p className="mt-1 text-xs">
-              Siswa sudah memperbaiki dan mengirim ulang jurnal ini - periksa kembali di bawah.
+              Murid sudah memperbaiki dan mengirim ulang jurnal ini - periksa kembali di bawah.
             </p>
           )}
         </div>
@@ -105,7 +105,7 @@ export default async function VerifikasiJurnalPage({
       ) : (
         <p className="mt-4 border-t border-slate-100 pt-4 text-sm text-slate-500 dark:border-slate-800">
           {journal.status === "draft"
-            ? "Jurnal ini sedang diperbaiki siswa (status draf) dan belum bisa diverifikasi."
+            ? "Jurnal ini sedang diperbaiki murid (status draf) dan belum bisa diverifikasi."
             : "Jurnal ini sudah diverifikasi final."}
         </p>
       )}

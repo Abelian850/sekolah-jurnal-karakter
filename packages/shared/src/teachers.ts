@@ -1,5 +1,5 @@
 /**
- * Konvensi akun Guru (revisi Juli 2026), meniru konvensi siswa
+ * Konvensi akun Guru (revisi Juli 2026), meniru konvensi murid
  * (lihat students.ts):
  * - Login guru = NIP ATAU email.
  * - Kata sandi AWAL guru = NIP (dapat direset via

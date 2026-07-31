@@ -20,7 +20,7 @@ export const evidenceRequirementsRoute = new Hono<{ Bindings: Env; Variables: Va
 /**
  * Kebiasaan wajib berbukti foto per hari (requirement 7 Kebiasaan Anak
  * Indonesia Hebat). Guru Wali memilih SATU item dari template jurnal aktif
- * sekolahnya; pilihan berlaku untuk SEMUA siswa binaannya pada tanggal itu.
+ * sekolahnya; pilihan berlaku untuk SEMUA murid binaannya pada tanggal itu.
  *
  * Prinsip keamanan sama dengan verifications.ts: identitas guru diturunkan
  * dari database (users.id pada JWT -> teachers.userId), bukan dari klien.
@@ -163,7 +163,7 @@ evidenceRequirementsRoute.put(
 
 /**
  * DELETE /evidence-requirements?date=YYYY-MM-DD - hapus pilihan untuk satu
- * tanggal. Setelah dihapus, berlaku fallback: siswa wajib melampirkan
+ * tanggal. Setelah dihapus, berlaku fallback: murid wajib melampirkan
  * minimal satu foto pada kebiasaan mana pun.
  */
 evidenceRequirementsRoute.delete(

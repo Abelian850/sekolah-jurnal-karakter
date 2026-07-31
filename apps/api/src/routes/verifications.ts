@@ -30,13 +30,14 @@ export const verificationsRoute = new Hono<{ Bindings: Env; Variables: Variables
  *
  * Prinsip keamanan sama dengan journals.ts: identitas guru SELALU diturunkan
  * dari database (users.id pada JWT -> teachers.userId), dan setiap jurnal yang
- * diakses WAJIB terbukti milik siswa binaan aktif guru tersebut lewat join ke
+ * diakses WAJIB terbukti milik murid perwalian aktif guru tersebut lewat join ke
  * teacher_student - bukan dari parameter yang dikirim klien.
  *
- * Alur status (keputusan desain Fase 6):
- * - "disetujui" -> journals.status = approved (final) + nilai karakter WAJIB
+ * Alur status (keputusan desain Fase 6, revisi Juli 2026):
+ * - "disetujui" -> journals.status = approved (final) + nilai karakter
+ *                  dihitung OTOMATIS dari item jurnal (computeCharacterScore)
  * - "ditolak"   -> journals.status = rejected (final) + catatan WAJIB
- * - "revisi"    -> journals.status = draft (siswa memperbaiki lalu kirim ulang;
+ * - "revisi"    -> journals.status = draft (murid memperbaiki lalu kirim ulang;
  *                  baris verifications di-UPSERT saat guru menilai ulang)
  */
 
@@ -47,9 +48,9 @@ async function findOwnTeacher(db: Database, userId: string) {
 }
 
 /**
- * Jurnal milik siswa binaan AKTIF guru yang sedang login, beserta info siswa.
+ * Jurnal milik murid perwalian AKTIF guru yang sedang login, beserta info murid.
  * Bukan-binaan dan tidak-ada sengaja disatukan menjadi "tidak ketemu" (404)
- * agar tidak membocorkan keberadaan jurnal siswa lain.
+ * agar tidak membocorkan keberadaan jurnal murid lain.
  */
 async function findBinaanJournal(db: Database, teacherUserId: string, journalId: string) {
   const [row] = await db
@@ -103,13 +104,13 @@ const notFoundTeacher = {
 
 const notFoundJournal = {
   error: "not_found",
-  message: "Jurnal tidak ditemukan atau bukan milik siswa binaan Anda",
+  message: "Jurnal tidak ditemukan atau bukan milik murid perwalian Anda",
   statusCode: 404,
 } as const;
 
 /**
  * GET /verifications/pending
- * Daftar jurnal berstatus "submitted" milik semua siswa binaan aktif guru
+ * Daftar jurnal berstatus "submitted" milik semua murid perwalian aktif guru
  * yang sedang login, terlama dulu (yang paling lama menunggu diproses dulu).
  */
 verificationsRoute.get(
@@ -196,10 +197,10 @@ const statsQuerySchema = z.object({
 /**
  * GET /verifications/stats?date=YYYY-MM-DD&month=YYYY-MM&days=30
  * Data dashboard Guru Wali (kartu ringkasan + kalender + diagram):
- * - counts       : siswa binaan aktif + jurnal menunggu diperiksa (semua waktu)
+ * - counts       : murid perwalian aktif + jurnal menunggu diperiksa (semua waktu)
  * - verification : distribusi hasil verifikasi guru INI `days` hari terakhir
  *                  (+ menunggu = submitted binaan yang belum diverifikasi)
- * - trend        : 7 hari terakhir, jurnal terkirim per tanggal (siswa binaan)
+ * - trend        : 7 hari terakhir, jurnal terkirim per tanggal (murid perwalian)
  * - calendar     : rekap status jurnal binaan per tanggal pada bulan `month`
  *
  * "Hari ini" dikirim frontend via ?date= (WIB, pola sama /journals/today).
@@ -227,7 +228,7 @@ verificationsRoute.get(
     const monthStart = `${month}-01`;
     const monthEnd = iso(new Date(Date.UTC(yearNum, monthNum, 0)));
 
-    // Join standar "jurnal milik siswa binaan aktif guru ini".
+    // Join standar "jurnal milik murid perwalian aktif guru ini".
     const binaanJoin = and(
       eq(teacherStudent.studentId, journals.studentId),
       eq(teacherStudent.isActive, true)
@@ -350,9 +351,9 @@ const studentsQuerySchema = z.object({
 
 /**
  * GET /verifications/students?date=YYYY-MM-DD
- * Daftar siswa binaan AKTIF guru yang sedang login, beserta status jurnal
+ * Daftar murid perwalian AKTIF guru yang sedang login, beserta status jurnal
  * masing-masing pada tanggal `date` (biasanya hari ini, WIB dari frontend).
- * journalStatus null = siswa belum membuat jurnal sama sekali di tanggal itu.
+ * journalStatus null = murid belum membuat jurnal sama sekali di tanggal itu.
  * Prinsip sama dengan /stats: identitas guru dari JWT, bukan dari klien.
  */
 verificationsRoute.get(
@@ -391,7 +392,7 @@ verificationsRoute.get(
 
 /**
  * GET /verifications/journals/:id
- * Detail satu jurnal siswa binaan: jurnal + identitas siswa + item + hasil
+ * Detail satu jurnal murid perwalian: jurnal + identitas murid + item + hasil
  * verifikasi sebelumnya (jika ada, mis. kasus revisi yang dikirim ulang).
  */
 verificationsRoute.get(
@@ -478,14 +479,28 @@ const verifySchema = z
   .object({
     status: z.enum(["disetujui", "ditolak", "revisi"]),
     note: z.string().max(2000).nullish(),
+    // Revisi Juli 2026: nilai karakter TIDAK lagi dikirim klien — dihitung
+    // otomatis server dari status item jurnal (lihat computeCharacterScore).
+    // Field dipertahankan nullish agar klien lama tidak error, tapi diabaikan.
     characterScore: z.number().int().min(1).max(100).nullish(),
-  })
-  .refine((v) => v.status !== "disetujui" || v.characterScore != null, {
-    message: "Nilai karakter (1-100) wajib diisi saat menyetujui jurnal",
   })
   .refine((v) => v.status === "disetujui" || (v.note != null && v.note.trim().length > 0), {
     message: "Catatan wajib diisi saat menolak atau meminta revisi",
   });
+
+/**
+ * Nilai karakter otomatis (revisi Juli 2026): proporsi kebiasaan yang
+ * "selesai" terhadap seluruh item jurnal, skala 1-100. Data lama berstatus
+ * "sebagian" dihitung setengah. Minimal 1 karena kolom bermakna 1-100.
+ */
+function computeCharacterScore(items: Array<{ status: string }>): number | null {
+  if (items.length === 0) return null;
+  const points = items.reduce(
+    (acc, it) => acc + (it.status === "selesai" ? 1 : it.status === "sebagian" ? 0.5 : 0),
+    0
+  );
+  return Math.max(1, Math.round((points / items.length) * 100));
+}
 
 /**
  * POST /verifications/journals/:id
@@ -493,7 +508,7 @@ const verifySchema = z
  * 1. UPSERT baris verifications (unik per jurnal - guru terakhir yang menilai
  *    ulang jurnal revisi akan menimpa hasil sebelumnya).
  * 2. Update journals.status sesuai peta di komentar atas file ini.
- * 3. Buat notifikasi untuk siswa DAN semua orang tua yang tertaut.
+ * 3. Buat notifikasi untuk murid DAN semua orang tua yang tertaut.
  * 4. Catat audit log.
  */
 verificationsRoute.post(
@@ -519,7 +534,7 @@ verificationsRoute.post(
           error: "conflict",
           message:
             row.journal.status === "draft"
-              ? "Jurnal ini masih draf (belum dikirim siswa atau sedang direvisi)"
+              ? "Jurnal ini masih draf (belum dikirim murid atau sedang direvisi)"
               : "Jurnal ini sudah diverifikasi final",
           statusCode: 409,
         },
@@ -527,11 +542,17 @@ verificationsRoute.post(
       );
     }
 
+    // Nilai karakter dihitung otomatis dari item jurnal — bukan dari input guru.
+    const autoScore =
+      body.status === "disetujui"
+        ? computeCharacterScore(await listJournalItems(db, row.journal.id))
+        : null;
+
     const verificationValues = {
       teacherId: teacher.id,
       status: body.status,
       note: body.note ?? null,
-      characterScore: body.status === "disetujui" ? (body.characterScore ?? null) : null,
+      characterScore: autoScore,
       verifiedAt: new Date(),
     };
 
@@ -550,7 +571,7 @@ verificationsRoute.post(
       .where(eq(journals.id, row.journal.id))
       .returning();
 
-    // ---------- Notifikasi untuk siswa + orang tua tertaut ----------
+    // ---------- Notifikasi untuk murid + orang tua tertaut ----------
     const [studentRow] = await db
       .select({ userId: students.userId })
       .from(students)

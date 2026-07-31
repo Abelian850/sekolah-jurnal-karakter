@@ -115,7 +115,7 @@ function GraduatePanel({ schoolId, students }: { schoolId: string; students: Stu
   async function handleSubmit() {
     if (
       !window.confirm(
-        `Luluskan ${includedCount} siswa angkatan ${gradeLevel}? Akun login mereka akan dinonaktifkan dan penugasan Guru Wali dilepas. Riwayat jurnal & nilai tetap tersimpan.`
+        `Luluskan ${includedCount} murid angkatan ${gradeLevel}? Akun login mereka akan dinonaktifkan dan penugasan Guru Wali dilepas. Riwayat jurnal & nilai tetap tersimpan.`
       )
     ) {
       return;
@@ -141,7 +141,7 @@ function GraduatePanel({ schoolId, students }: { schoolId: string; students: Stu
     <div className="glass-panel max-w-3xl rounded-2xl p-6">
       <h2 className="mb-1 text-lg font-semibold">1. Kelulusan Massal</h2>
       <p className="mb-4 text-sm text-slate-500">
-        Tandai satu angkatan penuh sebagai lulus. Centang siswa yang{" "}
+        Tandai satu angkatan penuh sebagai lulus. Centang murid yang{" "}
         <strong>tinggal kelas / ditunda</strong> untuk mengecualikannya.
       </p>
 
@@ -163,7 +163,7 @@ function GraduatePanel({ schoolId, students }: { schoolId: string; students: Stu
       </select>
 
       {candidates.length === 0 ? (
-        <p className="text-sm text-slate-500">Tidak ada siswa aktif pada angkatan ini.</p>
+        <p className="text-sm text-slate-500">Tidak ada murid aktif pada angkatan ini.</p>
       ) : (
         <>
           <div className="mb-4 max-h-64 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700">
@@ -203,7 +203,7 @@ function GraduatePanel({ schoolId, students }: { schoolId: string; students: Stu
             disabled={submitting || includedCount === 0}
             className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
           >
-            {submitting ? "Memproses..." : `Luluskan ${includedCount} siswa`}
+            {submitting ? "Memproses..." : `Luluskan ${includedCount} murid`}
           </button>
         </>
       )}
@@ -287,7 +287,7 @@ function PromotePanel({ schoolId, students }: { schoolId: string; students: Stud
     }));
     if (
       !window.confirm(
-        `Naikkan ${affectedCount} siswa sesuai ${mappings.length} pemetaan kelas? Siswa yang dicentang "tinggal kelas" tidak diubah.`
+        `Naikkan ${affectedCount} murid sesuai ${mappings.length} pemetaan kelas? Murid yang dicentang "tinggal kelas" tidak diubah.`
       )
     ) {
       return;
@@ -375,7 +375,7 @@ function PromotePanel({ schoolId, students }: { schoolId: string; students: Stud
 
       <details className="mb-4 rounded-lg border border-slate-200 p-3 text-sm dark:border-slate-700">
         <summary className="cursor-pointer font-medium">
-          Siswa tinggal kelas (dikecualikan): {excluded.size}
+          Murid tinggal kelas (dikecualikan): {excluded.size}
         </summary>
         <div className="mt-2 max-h-64 overflow-y-auto">
           {enabledRows.map((r) => {
@@ -417,7 +417,7 @@ function PromotePanel({ schoolId, students }: { schoolId: string; students: Stud
         disabled={submitting || enabledRows.length === 0 || invalid.length > 0 || affectedCount === 0}
         className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-50"
       >
-        {submitting ? "Memproses..." : `Naikkan ${affectedCount} siswa`}
+        {submitting ? "Memproses..." : `Naikkan ${affectedCount} murid`}
       </button>
 
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}

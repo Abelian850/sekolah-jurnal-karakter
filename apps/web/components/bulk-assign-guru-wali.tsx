@@ -29,10 +29,10 @@ const inputClass =
   "w-full rounded-lg border border-slate-300 bg-white/80 px-3 py-2 text-sm outline-none focus:border-brand-500 dark:border-slate-700 dark:bg-slate-900/80";
 
 /**
- * Penugasan Guru Wali massal (revisi Juli 2026). Dua cara memilih siswa:
- * 1. Multi-select dari daftar peserta didik (dengan pencarian nama/kelas).
+ * Penugasan Guru Wali massal (revisi Juli 2026). Dua cara memilih murid:
+ * 1. Multi-select dari daftar murid (dengan pencarian nama/kelas).
  * 2. Upload file Excel berkolom `nisn` ATAU tempel daftar NISN (satu per
- *    baris) - dicocokkan ke database peserta didik oleh backend.
+ *    baris) - dicocokkan ke database murid oleh backend.
  * Hasil dilaporkan per baris (NISN tak ditemukan / sudah punya wali tidak
  * menggagalkan baris lain). Pemindahan wali tetap lewat form tunggal.
  */
@@ -141,7 +141,7 @@ export function BulkAssignGuruWali({
     if (studentIds.length === 0 && nisnList.length === 0) {
       setError(
         mode === "pilih"
-          ? "Centang minimal satu peserta didik."
+          ? "Centang minimal satu murid."
           : "Isi minimal satu NISN (upload file atau tempel daftar)."
       );
       return;
@@ -259,11 +259,11 @@ export function BulkAssignGuruWali({
                 </li>
               ))}
               {filtered.length === 0 && (
-                <li className="px-3 py-2 text-sm text-slate-500">Tidak ada siswa yang cocok.</li>
+                <li className="px-3 py-2 text-sm text-slate-500">Tidak ada murid yang cocok.</li>
               )}
             </ul>
           </div>
-          <p className="mt-1 text-xs text-slate-500">{selected.size} siswa terpilih.</p>
+          <p className="mt-1 text-xs text-slate-500">{selected.size} murid terpilih.</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -299,7 +299,7 @@ export function BulkAssignGuruWali({
         disabled={isPending}
         className="w-fit rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-60"
       >
-        {isPending ? "Memproses..." : "Tugaskan ke Semua Siswa Terpilih"}
+        {isPending ? "Memproses..." : "Tugaskan ke Semua Murid Terpilih"}
       </button>
 
       {results && (

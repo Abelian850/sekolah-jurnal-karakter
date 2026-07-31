@@ -66,7 +66,7 @@ export default async function JurnalHariIniPage({
 
       {profileMissing ? (
         <p className="text-sm text-slate-500">
-          Profil peserta didik untuk akun ini belum terdaftar. Hubungi Admin sekolah.
+          Profil murid untuk akun ini belum terdaftar. Hubungi Admin sekolah.
         </p>
       ) : data === null ? (
         <div>

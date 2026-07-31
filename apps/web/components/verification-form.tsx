@@ -17,34 +17,35 @@ const STATUS_OPTIONS: Array<{
   {
     value: "disetujui",
     label: "Setujui",
-    description: "Jurnal benar dan lengkap. Beri nilai karakter 1-100.",
+    description:
+      "Jurnal benar dan lengkap. Nilai karakter dihitung otomatis dari kebiasaan yang selesai.",
   },
   {
     value: "revisi",
     label: "Minta Revisi",
-    description: "Ada yang perlu diperbaiki - jurnal dikembalikan ke siswa untuk dikirim ulang.",
+    description: "Ada yang perlu diperbaiki - jurnal dikembalikan ke murid untuk dikirim ulang.",
   },
   {
     value: "ditolak",
     label: "Tolak",
-    description: "Jurnal tidak dapat diterima (final, siswa tidak bisa mengubahnya lagi).",
+    description: "Jurnal tidak dapat diterima (final, murid tidak bisa mengubahnya lagi).",
   },
 ];
 
 const CONFIRM_MESSAGES: Record<VerifyJournalPayload["status"], string> = {
   disetujui: "Setujui jurnal ini? Keputusan ini final.",
-  revisi: "Kembalikan jurnal ini ke siswa untuk diperbaiki?",
-  ditolak: "Tolak jurnal ini? Keputusan ini final dan siswa tidak bisa memperbaikinya.",
+  revisi: "Kembalikan jurnal ini ke murid untuk diperbaiki?",
+  ditolak: "Tolak jurnal ini? Keputusan ini final dan murid tidak bisa memperbaikinya.",
 };
 
 /**
  * Form verifikasi jurnal oleh Guru Wali. Validasi di sini hanya untuk UX -
- * aturan sesungguhnya (nilai wajib saat setuju, catatan wajib saat
- * tolak/revisi) ditegakkan lagi oleh zod di backend.
+ * aturan sesungguhnya (catatan wajib saat tolak/revisi) ditegakkan lagi oleh
+ * zod di backend. Nilai karakter TIDAK diisi manual — dihitung otomatis oleh
+ * server dari kebiasaan yang selesai (revisi Juli 2026).
  */
 export function VerificationForm({ journalId }: { journalId: string }) {
   const [status, setStatus] = useState<VerifyJournalPayload["status"]>("disetujui");
-  const [score, setScore] = useState("");
   const [note, setNote] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -52,11 +53,6 @@ export function VerificationForm({ journalId }: { journalId: string }) {
   function handleSubmit() {
     setError(null);
 
-    const parsedScore = Number(score);
-    if (status === "disetujui" && (!score || parsedScore < 1 || parsedScore > 100)) {
-      setError("Nilai karakter wajib diisi (1-100) saat menyetujui jurnal.");
-      return;
-    }
     if (status !== "disetujui" && !note.trim()) {
       setError("Catatan wajib diisi saat menolak atau meminta revisi.");
       return;
@@ -68,7 +64,6 @@ export function VerificationForm({ journalId }: { journalId: string }) {
         await verifyJournal(journalId, {
           status,
           note: note.trim() || null,
-          characterScore: status === "disetujui" ? parsedScore : null,
         });
       } catch (err) {
         // redirect() dari server action dilempar sebagai error khusus Next -
@@ -110,18 +105,10 @@ export function VerificationForm({ journalId }: { journalId: string }) {
       </div>
 
       {status === "disetujui" && (
-        <div className="mb-4">
-          <label className="mb-1 block text-sm font-medium">Nilai Karakter (1-100)</label>
-          <input
-            type="number"
-            min={1}
-            max={100}
-            value={score}
-            onChange={(e) => setScore(e.target.value)}
-            placeholder="contoh: 85"
-            className={`${inputClass} w-32`}
-          />
-        </div>
+        <p className="mb-4 rounded-lg border border-brand-200 bg-brand-50/50 p-3 text-xs text-slate-600 dark:border-brand-900 dark:bg-brand-900/10 dark:text-slate-400">
+          Nilai karakter dihitung otomatis dari proporsi kebiasaan yang selesai —
+          Anda tidak perlu mengisi nilai manual.
+        </p>
       )}
 
       <div className="mb-4">
@@ -134,7 +121,7 @@ export function VerificationForm({ journalId }: { journalId: string }) {
           rows={3}
           placeholder={
             status === "disetujui"
-              ? "Apresiasi atau masukan untuk siswa..."
+              ? "Apresiasi atau masukan untuk murid..."
               : "Jelaskan apa yang perlu diperbaiki/alasan penolakan..."
           }
           className={inputClass}

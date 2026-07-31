@@ -206,7 +206,7 @@ export function JournalTemplateDetailView({
       <div className="glass-panel rounded-2xl p-6">
         <h2 className="mb-2 text-lg font-semibold">Hapus Template</h2>
         <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
-          Hanya bisa dilakukan jika belum ada jurnal siswa yang memakai template ini. Jika sudah
+          Hanya bisa dilakukan jika belum ada jurnal murid yang memakai template ini. Jika sudah
           terpakai, nonaktifkan saja dengan mengaktifkan template lain.
         </p>
         <form action={deleteTemplate.bind(null, basePath, template.id)}>

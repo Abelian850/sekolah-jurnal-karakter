@@ -65,7 +65,7 @@ export function AssignGuruWaliForm({
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <label className="mb-1 block text-sm font-medium">Peserta Didik</label>
+        <label className="mb-1 block text-sm font-medium">Murid</label>
         <select
           value={studentId}
           onChange={(e) => {
@@ -111,7 +111,7 @@ export function AssignGuruWaliForm({
       {checked && (
         <p className="text-sm">
           Guru Wali saat ini:{" "}
-          <span className="font-medium">{currentTeacherName ?? "Belum ada (siswa belum dibina siapa pun)"}</span>
+          <span className="font-medium">{currentTeacherName ?? "Belum ada (murid belum dibina siapa pun)"}</span>
         </p>
       )}
 
