@@ -5,3 +5,4 @@ export * from "./students";
 export * from "./teachers";
 export * from "./journal-items";
 export * from "./journal-questions";
+export * from "./character-score";

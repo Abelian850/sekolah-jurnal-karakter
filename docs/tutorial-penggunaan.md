@@ -216,8 +216,19 @@ untuk melihat detail isiannya.
    semua jurnal siswa binaan yang sudah dikirim, terlama dulu.
 2. Klik **Periksa** pada salah satu jurnal untuk melihat seluruh isiannya.
 3. Pilih salah satu keputusan:
-   - **Setujui** — jurnal benar dan lengkap. **Nilai Karakter (1-100) wajib
-     diisi**; catatan apresiasi opsional. Keputusan ini final.
+   - **Setujui** — jurnal benar dan lengkap. **Nilai Karakter dihitung
+     otomatis oleh sistem**, tidak diisi guru: proporsi kebiasaan yang
+     berstatus "selesai" terhadap kebiasaan yang diskor, skala 1-100.
+     Catatan apresiasi opsional. Keputusan ini final.
+
+     Item **Beribadah dikecualikan dari perhitungan nilai**. Isian ibadah
+     tetap wajib diisi murid, tetap Anda periksa, dan tetap muncul di rekap
+     kebiasaan — hanya tidak ikut menentukan angka. Alasannya: syarat
+     "selesai" untuk item ini tidak setara antar agama (murid Islam dinilai
+     dari lima waktu sholat, murid non-Islam cukup mengisi keterangan
+     ibadahnya), sehingga angkanya tidak adil dibandingkan lintas agama.
+     Dengan 7 kebiasaan, berarti nilai dihitung dari 6 item — setiap
+     kebiasaan bernilai sekitar 16,7 poin.
    - **Minta Revisi** — ada yang perlu diperbaiki. **Catatan wajib diisi**
      (jelaskan apa yang salah). Jurnal kembali menjadi draf di sisi siswa
      agar bisa diperbaiki dan dikirim ulang, lalu muncul lagi di daftar

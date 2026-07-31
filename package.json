@@ -17,6 +17,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
     "db:migrate": "tsx apps/api/src/db/migrate.ts",
+    "db:backfill-score": "tsx apps/api/src/db/backfill-character-score.ts",
     "db:studio": "drizzle-kit studio --config=drizzle.config.ts"
   },
   "devDependencies": {

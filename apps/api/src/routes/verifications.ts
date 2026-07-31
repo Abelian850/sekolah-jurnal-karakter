@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { eq, and, asc, desc, gte, lte, sql } from "drizzle-orm";
-import { PERMISSIONS } from "@sjk/shared";
+import { PERMISSIONS, computeCharacterScore } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
 import {
@@ -35,7 +35,9 @@ export const verificationsRoute = new Hono<{ Bindings: Env; Variables: Variables
  *
  * Alur status (keputusan desain Fase 6, revisi Juli 2026):
  * - "disetujui" -> journals.status = approved (final) + nilai karakter
- *                  dihitung OTOMATIS dari item jurnal (computeCharacterScore)
+ *                  dihitung OTOMATIS dari item jurnal (computeCharacterScore
+ *                  di @sjk/shared; item "Beribadah" TIDAK ikut diskor sejak
+ *                  revisi Juli 2026 tahap 3)
  * - "ditolak"   -> journals.status = rejected (final) + catatan WAJIB
  * - "revisi"    -> journals.status = draft (murid memperbaiki lalu kirim ulang;
  *                  baris verifications di-UPSERT saat guru menilai ulang)
@@ -488,19 +490,10 @@ const verifySchema = z
     message: "Catatan wajib diisi saat menolak atau meminta revisi",
   });
 
-/**
- * Nilai karakter otomatis (revisi Juli 2026): proporsi kebiasaan yang
- * "selesai" terhadap seluruh item jurnal, skala 1-100. Data lama berstatus
- * "sebagian" dihitung setengah. Minimal 1 karena kolom bermakna 1-100.
- */
-function computeCharacterScore(items: Array<{ status: string }>): number | null {
-  if (items.length === 0) return null;
-  const points = items.reduce(
-    (acc, it) => acc + (it.status === "selesai" ? 1 : it.status === "sebagian" ? 0.5 : 0),
-    0
-  );
-  return Math.max(1, Math.round((points / items.length) * 100));
-}
+// Rumus nilai karakter tinggal di packages/shared (character-score.ts) agar
+// jalur verifikasi ini dan skrip backfill memakai perhitungan yang sama
+// persis. Sejak revisi Juli 2026 tahap 3, item "Beribadah" TIDAK ikut diskor
+// - lihat UNSCORED_JOURNAL_ITEM_NAMES beserta alasannya di journal-items.ts.
 
 /**
  * POST /verifications/journals/:id
