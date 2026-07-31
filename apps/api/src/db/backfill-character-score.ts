@@ -165,9 +165,23 @@ async function main() {
   let unchanged = 0;
 
   for (const [verificationId, { meta, items }] of grouped) {
-    // PENGAMAN: hanya baris yang terbukti buatan mesin yang boleh disentuh.
-    // Kalau nilai tersimpan tidak sama dengan hasil rumus lama, itu angka
-    // yang diketik guru - biarkan apa adanya, selamanya.
+    const newScore = computeCharacterScore(
+      items.map((it) => ({ itemName: it.item_name, status: it.status }))
+    );
+
+    // URUTAN PENTING: periksa "sudah benar" LEBIH DULU, sebelum menanyakan
+    // asal-usul angkanya. Kalau dibalik, baris yang baru saja ditulis skrip
+    // ini akan gagal dicocokkan dengan rumus lama pada eksekusi berikutnya,
+    // lalu salah dicap "nilai guru" - dan ikut terkunci dari perhitungan
+    // ulang di masa depan. Itu benar-benar terjadi pada eksekusi 31 Juli
+    // 2026 sebelum urutan ini diperbaiki.
+    if (newScore === meta.character_score) {
+      unchanged += 1;
+      continue;
+    }
+
+    // PENGAMAN: nilai yang tidak cocok dengan rumus mana pun berarti diketik
+    // Guru Wali - biarkan apa adanya, selamanya.
     const legacyScore = computeLegacyCharacterScore(items);
     if (legacyScore !== meta.character_score) {
       skipped.push({
@@ -177,14 +191,6 @@ async function main() {
         storedScore: meta.character_score,
         legacyScore,
       });
-      continue;
-    }
-
-    const newScore = computeCharacterScore(
-      items.map((it) => ({ itemName: it.item_name, status: it.status }))
-    );
-    if (newScore === meta.character_score) {
-      unchanged += 1;
       continue;
     }
     changes.push({
