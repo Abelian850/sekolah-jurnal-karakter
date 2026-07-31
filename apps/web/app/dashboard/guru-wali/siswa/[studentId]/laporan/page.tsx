@@ -107,12 +107,23 @@ export default async function LaporanSiswaPage({
 
   return (
     <div>
-      {/* Sembunyikan topbar & nav layout saat print — keduanya elemen
-          <header>/<nav> satu-satunya di halaman ini. */}
-      <style>{`@media print {
+      {/* CSS khusus cetak:
+          1. Sembunyikan topbar & nav layout (satu-satunya <header>/<nav>).
+          2. print-color-adjust: exact — WAJIB, karena browser secara default
+             TIDAK mencetak background-color. Tanpa ini bar Capaian 7
+             Kebiasaan dan kartu ringkasan hilang total di PDF.
+          3. break-inside: avoid pada blok yang tidak boleh terbelah halaman
+             (tanda tangan, bukti foto, tiap baris kebiasaan). */}
+      <style>{`@page { size: A4; margin: 12mm; }
+      @media print {
         header, nav { display: none !important; }
         .glass-panel { box-shadow: none !important; border: none !important; }
         body { background: white !important; }
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        .cetak-utuh { break-inside: avoid; page-break-inside: avoid; }
       }`}</style>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
@@ -218,7 +229,10 @@ export default async function LaporanSiswaPage({
             {report.habits.map((h) => {
               const pct = percent(h.selesai, h.total);
               return (
-                <div key={h.templateItemId} className="grid grid-cols-[170px_1fr_48px] items-center gap-3 text-sm">
+                <div
+                  key={h.templateItemId}
+                  className="cetak-utuh grid grid-cols-[170px_1fr_48px] items-center gap-3 text-sm"
+                >
                   <span>{h.itemName}</span>
                   <div className="h-2 rounded bg-slate-100 dark:bg-slate-800">
                     <div
@@ -237,7 +251,7 @@ export default async function LaporanSiswaPage({
 
         <h2 className="mb-2 mt-6 text-sm font-semibold">Bukti Foto Terakhir (Terverifikasi)</h2>
         {report.lastPhoto?.photoUrl ? (
-          <div className="flex flex-wrap items-start gap-4">
+          <div className="cetak-utuh flex flex-wrap items-start gap-4">
             <img
               src={report.lastPhoto.photoUrl}
               alt={`Bukti ${report.lastPhoto.itemName}`}
@@ -271,16 +285,16 @@ export default async function LaporanSiswaPage({
           <p className="text-sm text-slate-500">Belum ada catatan verifikasi pada periode ini.</p>
         )}
 
-        <div className="mt-10 grid grid-cols-2 gap-8 text-center text-sm">
+        <div className="cetak-utuh mt-10 grid grid-cols-2 gap-8 pb-2 text-center text-sm">
           <div>
             <p className="text-slate-600 dark:text-slate-400">Mengetahui, Guru Wali</p>
-            <p className="mt-16 border-t border-slate-400 pt-2 font-medium">
+            <p className="mt-14 border-t border-slate-400 pt-2 font-medium">
               {report.meta.teacherName}
             </p>
           </div>
           <div>
             <p className="text-slate-600 dark:text-slate-400">Orang Tua / Wali Murid</p>
-            <p className="mt-16 border-t border-slate-400 pt-2 font-medium">
+            <p className="mt-14 border-t border-slate-400 pt-2 font-medium">
               (............................)
             </p>
           </div>
