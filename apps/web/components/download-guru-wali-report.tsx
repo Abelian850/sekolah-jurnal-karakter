@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import * as XLSX from "xlsx";
+import { toReportScore } from "@sjk/shared";
 import {
   getGuruWaliRecap,
   type GuruWaliRecap,
@@ -65,7 +66,7 @@ function recapRows(data: GuruWaliRecap): (string | number)[][] {
     s.rejected,
     s.draft,
     s.daysWithoutJournal,
-    s.avgScore ?? "-",
+    toReportScore(s.avgScore) ?? "-",
   ]);
 }
 

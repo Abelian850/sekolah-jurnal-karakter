@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { formatDateID, getTodayDateWIB } from "@/lib/date";
+import { toReportScore } from "@sjk/shared";
 import { PrintButton } from "@/components/print-button";
 
 /**
@@ -211,7 +212,7 @@ export default async function LaporanSiswaPage({
           </div>
           <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
             <p className="text-xs text-slate-500 dark:text-slate-400">Rata-rata nilai</p>
-            <p className="text-xl font-semibold">{s.avgScore ?? "-"}</p>
+            <p className="text-xl font-semibold">{toReportScore(s.avgScore) ?? "-"}</p>
           </div>
           <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
             <p className="text-xs text-slate-500 dark:text-slate-400">Komentar orang tua</p>

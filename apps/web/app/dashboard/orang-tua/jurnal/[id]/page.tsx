@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { apiFetch } from "@/lib/api-client";
 import { formatDateID } from "@/lib/date";
+import { toReportScore } from "@sjk/shared";
 import { JournalItemsView, type JournalItemData } from "@/components/journal-items-view";
 import { createComment } from "./actions";
 
@@ -102,7 +103,7 @@ export default async function JurnalAnakDetailPage({
               </span>
               {verification.characterScore != null && (
                 <p className="text-sm">
-                  Nilai karakter: <span className="font-semibold">{verification.characterScore}</span>
+                  Nilai karakter: <span className="font-semibold">{toReportScore(verification.characterScore)}</span>
                 </p>
               )}
             </div>

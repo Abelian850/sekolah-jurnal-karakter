@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { apiFetch } from "@/lib/api-client";
 import { formatDateID } from "@/lib/date";
+import { toReportScore } from "@sjk/shared";
 
 interface Child {
   id: string;
@@ -90,7 +91,7 @@ export default async function AnakDetailPage({
                       {badge.label}
                     </span>
                   </td>
-                  <td className="py-2 tabular-nums">{j.characterScore ?? "-"}</td>
+                  <td className="py-2 tabular-nums">{toReportScore(j.characterScore) ?? "-"}</td>
                   <td className="py-2">
                     <Link
                       href={`/dashboard/orang-tua/jurnal/${j.id}`}

@@ -108,6 +108,12 @@ export default async function SiswaListPage({
                 )}
                 <td className="py-2">
                   <div className="flex items-center gap-3">
+                    <Link
+                      href={`/dashboard/admin/siswa/${s.id}/edit`}
+                      className="rounded-lg border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800"
+                    >
+                      Edit
+                    </Link>
                     <ResetStudentPasswordButton
                       studentId={s.id}
                       studentName={s.fullName}

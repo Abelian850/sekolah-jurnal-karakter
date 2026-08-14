@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { formatDateID } from "@/lib/date";
+import { toReportScore } from "@sjk/shared";
 
 interface VerificationHistory {
   id: string;
@@ -82,7 +83,7 @@ export default async function RiwayatVerifikasiPage() {
                       {badge.label}
                     </span>
                   </td>
-                  <td className="py-2">{v.characterScore ?? "-"}</td>
+                  <td className="py-2">{toReportScore(v.characterScore) ?? "-"}</td>
                   <td className="py-2">
                     <Link
                       href={`/dashboard/guru-wali/verifikasi/${v.journalId}`}

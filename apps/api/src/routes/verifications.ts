@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { eq, and, asc, desc, gte, lte, sql } from "drizzle-orm";
-import { PERMISSIONS, computeCharacterScore } from "@sjk/shared";
+import { PERMISSIONS, computeCharacterScore, toReportScore } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
 import {
@@ -581,7 +581,9 @@ verificationsRoute.post(
       disetujui: {
         title: "Jurnal disetujui",
         message: `Jurnal tanggal ${tanggal} disetujui oleh ${teacher.fullName}${
-          verification.characterScore != null ? ` dengan nilai karakter ${verification.characterScore}` : ""
+          verification.characterScore != null
+            ? ` dengan nilai karakter ${toReportScore(verification.characterScore)}`
+            : ""
         }.${verification.note ? ` Catatan: ${verification.note}` : ""}`,
       },
       ditolak: {

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { formatDateID } from "@/lib/date";
+import { toReportScore } from "@sjk/shared";
 import { JournalItemsView, type JournalItemData } from "@/components/journal-items-view";
 import { CommentsList, type CommentData } from "@/components/comments-list";
 
@@ -65,7 +66,7 @@ export default async function RiwayatJurnalDetailPage({
       {journal.status === "approved" && verification && (
         <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-300">
           {verification.characterScore != null && (
-            <p className="font-medium">Nilai karakter: {verification.characterScore}</p>
+            <p className="font-medium">Nilai karakter: {toReportScore(verification.characterScore)}</p>
           )}
           {verification.note && <p className="mt-1 whitespace-pre-wrap">{verification.note}</p>}
         </div>

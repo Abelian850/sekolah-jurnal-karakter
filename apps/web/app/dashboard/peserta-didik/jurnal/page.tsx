@@ -1,5 +1,6 @@
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { formatDateID, getTodayDateWIB } from "@/lib/date";
+import { toReportScore } from "@sjk/shared";
 import {
   JournalItemsForm,
   type EvidenceRequirementInfo,
@@ -110,7 +111,7 @@ export default async function JurnalHariIniPage({
           {data.journal.status === "approved" && data.verification && (
             <div className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-300">
               {data.verification.characterScore != null && (
-                <p className="font-medium">Nilai karakter: {data.verification.characterScore}</p>
+                <p className="font-medium">Nilai karakter: {toReportScore(data.verification.characterScore)}</p>
               )}
               {data.verification.note && (
                 <p className="mt-1 whitespace-pre-wrap">{data.verification.note}</p>

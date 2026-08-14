@@ -186,9 +186,9 @@ export default async function AdminOverviewPage({
         <StatCard label="Guru" value={counts.teachers} color="violet" icon={icons.teachers} />
         <StatCard label="Guru Wali" value={counts.guruWali} color="teal" icon={icons.guruWali} />
         <StatCard
-          label="Rata-rata Nilai Karakter"
+          label="Rata-rata Capaian Kebiasaan"
           value={avgScore ?? "-"}
-          hint="Dari jurnal yang dinilai 30 hari terakhir"
+          hint="Persentase kebiasaan selesai, 30 hari terakhir (bukan nilai rapor)"
           color="amber"
           icon={icons.score}
         />
@@ -252,11 +252,14 @@ export default async function AdminOverviewPage({
       {/* Murid paling rajin mengisi jurnal */}
       <TopStudentsCard students={topStudents} days={30} />
 
-      {/* Nilai karakter per kelas */}
+      {/* Capaian kebiasaan per kelas (angka mentah, bukan nilai rapor) */}
       <div className="glass-panel rounded-2xl p-6">
-        <h2 className="mb-1 text-lg font-semibold">Rata-rata Nilai Karakter per Kelas</h2>
+        <h2 className="mb-1 text-lg font-semibold">Rata-rata Capaian Kebiasaan per Kelas</h2>
         <p className="mb-5 text-sm text-slate-500 dark:text-slate-400">
-          Dari jurnal yang disetujui Guru Wali dalam 30 hari terakhir.
+          Persentase kebiasaan yang selesai dari jurnal yang disetujui Guru Wali
+          dalam 30 hari terakhir. Angka ini SENGAJA mentah (0-100%) agar selisih
+          antarkelas terlihat &mdash; berbeda dengan Nilai Karakter berskala
+          70-100 yang tampil ke murid, orang tua, dan rapor.
         </p>
         {avgScoreByClass.length === 0 ? (
           <p className="text-sm text-slate-500">Belum ada jurnal yang dinilai pada periode ini.</p>

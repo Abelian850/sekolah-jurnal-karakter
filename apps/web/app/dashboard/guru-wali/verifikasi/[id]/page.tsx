@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { formatDateID } from "@/lib/date";
+import { toReportScore } from "@sjk/shared";
 import { JournalItemsView, type JournalItemData } from "@/components/journal-items-view";
 import { VerificationForm } from "@/components/verification-form";
 import { CommentsList, type CommentData } from "@/components/comments-list";
@@ -76,7 +77,7 @@ export default async function VerifikasiJurnalPage({
         <div className="mb-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-300">
           <p className="font-medium">
             Riwayat: {VERIFICATION_LABELS[verification.status]}
-            {verification.characterScore != null && ` (nilai ${verification.characterScore})`}
+            {verification.characterScore != null && ` (nilai ${toReportScore(verification.characterScore)})`}
           </p>
           {verification.note && <p className="mt-1 whitespace-pre-wrap">{verification.note}</p>}
           {journal.status === "submitted" && verification.status === "revisi" && (

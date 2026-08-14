@@ -37,3 +37,43 @@ export function computeCharacterScore(items: ScorableJournalItem[]): number | nu
   );
   return Math.max(1, Math.round((points / scored.length) * 100));
 }
+
+/**
+ * Lantai nilai rapor (revisi Agustus 2026).
+ *
+ * Skor mentah computeCharacterScore adalah persentase kebiasaan yang selesai,
+ * jadi 4 dari 6 kebiasaan = 67. Angka itu benar sebagai ukuran capaian, tapi
+ * di rapor sekolah angka di bawah KKM terbaca "tidak tuntas" oleh orang tua -
+ * padahal murid yang bersangkutan menjalankan dua pertiga kebiasaan.
+ *
+ * Solusinya SENGAJA dipisah: database tetap menyimpan persentase mentah
+ * (verifications.character_score), dan pemetaan ke skala rapor hanya terjadi
+ * saat angka ditampilkan. Konsekuensinya:
+ * - Data lama tidak perlu di-backfill; tampilannya ikut berubah sendiri.
+ * - Dashboard Admin & Kepala Sekolah tetap memakai angka mentah supaya masih
+ *   bisa membedakan kelas yang capaiannya 33% dan 67%. Labelnya di sana
+ *   berbunyi "capaian kebiasaan", bukan "nilai", agar tidak tertukar.
+ * - Kalau suatu saat lantainya diubah, cukup ganti konstanta di bawah ini.
+ */
+export const REPORT_SCORE_FLOOR = 70;
+
+/**
+ * Petakan skor mentah (1-100) ke skala rapor (REPORT_SCORE_FLOOR-100).
+ *
+ * Pemetaannya LINEAR: nilai = lantai + (mentah / 100) x (100 - lantai).
+ * Sifat linear ini penting - artinya memetakan sebuah rata-rata memberi hasil
+ * yang sama dengan merata-ratakan nilai yang sudah dipetakan (selisih
+ * pembulatan saja), sehingga avgScore dari API boleh langsung dipetakan tanpa
+ * perlu menarik ulang tiap baris.
+ *
+ * Dengan 6 item yang diskor dan lantai 70, hasilnya bulat rapi:
+ *   0/6 -> 70, 1/6 -> 75, 2/6 -> 80, 3/6 -> 85, 4/6 -> 90, 5/6 -> 95, 6/6 -> 100
+ *
+ * null diteruskan sebagai null (jurnal belum dinilai / tidak ada item diskor).
+ */
+export function toReportScore(rawScore: number | null | undefined): number | null {
+  if (rawScore == null || !Number.isFinite(rawScore)) return null;
+  const clamped = Math.min(100, Math.max(0, rawScore));
+  const scaled = REPORT_SCORE_FLOOR + (clamped / 100) * (100 - REPORT_SCORE_FLOOR);
+  return Math.min(100, Math.max(REPORT_SCORE_FLOOR, Math.round(scaled)));
+}

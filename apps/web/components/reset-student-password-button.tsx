@@ -49,6 +49,7 @@ export function ResetStudentPasswordButton({
   return (
     <span className="inline-flex items-center gap-2">
       <button
+        type="button"
         onClick={handleClick}
         disabled={isPending}
         className="rounded-lg border border-slate-300 px-2 py-1 text-xs hover:bg-slate-50 disabled:opacity-60 dark:border-slate-700 dark:hover:bg-slate-800"

@@ -3,6 +3,7 @@ import { apiFetch, ApiRequestError } from "@/lib/api-client";
 import { formatDateID, getTodayDateWIB } from "@/lib/date";
 import { StatusCalendar, CalendarLegend, type CalendarMark } from "@/components/status-calendar";
 import { StatCard, Bar } from "@/components/stat-widgets";
+import { toReportScore } from "@sjk/shared";
 
 interface StudentProfile {
   id: string;
@@ -104,7 +105,7 @@ export default async function PesertaDidikHomePage({
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-3">
         <StatCard label="Jurnal (30 hari)" value={totalJournals} />
         <StatCard label="Disetujui (30 hari)" value={dist.approved} />
-        <StatCard label="Rata-rata Nilai Karakter" value={stats.avgScore ?? "-"} />
+        <StatCard label="Rata-rata Nilai Karakter" value={toReportScore(stats.avgScore) ?? "-"} />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -145,24 +146,30 @@ export default async function PesertaDidikHomePage({
 
           <h2 className="mb-1 mt-8 text-base font-semibold">Nilai Karakter 7 Hari Terakhir</h2>
           <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-            Nilai dari Guru Wali per hari (0-100). Strip berarti jurnal hari itu
-            belum dinilai.
+            Nilai dari Guru Wali per hari (70-100). Strip berarti jurnal hari
+            itu belum dinilai.
           </p>
           <div className="flex items-end gap-2" style={{ height: "7rem" }}>
-            {stats.scoreTrend.map((d) => (
-              <div key={d.date} className="flex flex-1 flex-col items-center gap-1">
-                <span className="text-xs tabular-nums text-slate-600 dark:text-slate-400">
-                  {d.score ?? "-"}
-                </span>
-                <div
-                  className={`w-full rounded-t ${d.score !== null ? "bg-brand-600" : "bg-slate-200 dark:bg-slate-800"}`}
-                  style={{
-                    height: `${d.score !== null ? Math.max(Math.round((d.score / 100) * 64), 6) : 2}px`,
-                  }}
-                />
-                <span className="text-[10px] text-slate-400">{d.date.slice(5)}</span>
-              </div>
-            ))}
+            {stats.scoreTrend.map((d) => {
+              // Angka di atas batang memakai skala rapor, TINGGI batang tetap
+              // memakai skor mentah. Kalau tingginya ikut dipetakan, semua
+              // batang jadi hampir sama tinggi (70-100) dan grafiknya percuma.
+              const nilai = toReportScore(d.score);
+              return (
+                <div key={d.date} className="flex flex-1 flex-col items-center gap-1">
+                  <span className="text-xs tabular-nums text-slate-600 dark:text-slate-400">
+                    {nilai ?? "-"}
+                  </span>
+                  <div
+                    className={`w-full rounded-t ${d.score !== null ? "bg-brand-600" : "bg-slate-200 dark:bg-slate-800"}`}
+                    style={{
+                      height: `${d.score !== null ? Math.max(Math.round((d.score / 100) * 64), 6) : 2}px`,
+                    }}
+                  />
+                  <span className="text-[10px] text-slate-400">{d.date.slice(5)}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

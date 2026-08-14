@@ -107,7 +107,8 @@ export function VerificationForm({ journalId }: { journalId: string }) {
       {status === "disetujui" && (
         <p className="mb-4 rounded-lg border border-brand-200 bg-brand-50/50 p-3 text-xs text-slate-600 dark:border-brand-900 dark:bg-brand-900/10 dark:text-slate-400">
           Nilai karakter dihitung otomatis dari proporsi kebiasaan yang selesai —
-          Anda tidak perlu mengisi nilai manual.
+          Anda tidak perlu mengisi nilai manual. Skalanya 70-100 (semua
+          kebiasaan selesai = 100, tidak ada yang selesai = 70).
         </p>
       )}
 

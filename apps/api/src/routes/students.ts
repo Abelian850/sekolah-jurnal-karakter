@@ -36,6 +36,35 @@ const studentFields = {
   birthDate: z.string().date().optional(),
 };
 
+/** Penjaga murah agar :id yang bukan UUID dijawab 404, bukan 500 dari Postgres. */
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Skema PATCH /students/:id - koreksi data murid yang salah input.
+ *
+ * `nisn` SENGAJA TIDAK ADA DI SINI, dan .strict() membuat pengirimannya
+ * ditolak 400 alih-alih diam-diam diabaikan. Alasannya: NISN bukan sekadar
+ * atribut, melainkan identitas login. users.email diturunkan darinya
+ * (nisnToEmail) dan kata sandi awal juga NISN, jadi mengubahnya harus ikut
+ * menyentuh dua kolom di tabel users. Itu alur tersendiri yang perlu
+ * disadari akibatnya - bukan satu isian di formulir edit biasa.
+ *
+ * Semua field opsional: yang tidak dikirim tidak diubah. String kosong pada
+ * nis/gender/birthDate berarti "kosongkan" (disimpan NULL), berbeda dengan
+ * field yang tidak dikirim sama sekali.
+ */
+const updateStudentSchema = z
+  .object({
+    nis: z.string().max(30).optional(),
+    fullName: z.string().min(3).max(255).optional(),
+    className: z.string().min(1).max(20).optional(),
+    gradeLevel: z.string().min(1).max(10).optional(),
+    gender: z.union([z.enum(["L", "P"]), z.literal("")]).optional(),
+    birthDate: z.union([z.string().date(), z.literal("")]).optional(),
+  })
+  .strict();
+
 /** Pesan error ramah saat NISN sudah terdaftar (cek dini sebelum insert). */
 async function findStudentByNisn(db: Parameters<typeof createUserAccount>[0], nisn: string) {
   const [row] = await db.select({ id: students.id }).from(students).where(eq(students.nisn, nisn));
@@ -95,6 +124,41 @@ studentsRoute.get(
     }
 
     return c.json({ data: result });
+  }
+);
+
+/**
+ * GET /students/:id - satu murid. Dipakai halaman Edit Murid di Admin untuk
+ * mengisi nilai awal formulir. Sengaja terdaftar SETELAH GET /me supaya
+ * "/me" tidak ikut tertangkap sebagai :id.
+ */
+studentsRoute.get(
+  "/:id",
+  authMiddleware,
+  requirePermission(PERMISSIONS.STUDENT_MANAGE),
+  async (c) => {
+    const db = c.get("db");
+    const id = c.req.param("id");
+
+    // Postgres melempar error sintaks kalau :id bukan UUID (mis. dari URL
+    // yang diketik manual). Tangkap lebih dulu supaya jawabannya 404 yang
+    // wajar, bukan 500.
+    if (!UUID_REGEX.test(id)) {
+      return c.json(
+        { error: "not_found", message: "Murid tidak ditemukan", statusCode: 404 },
+        404
+      );
+    }
+
+    const [student] = await db.select().from(students).where(eq(students.id, id));
+    if (!student) {
+      return c.json(
+        { error: "not_found", message: "Murid tidak ditemukan", statusCode: 404 },
+        404
+      );
+    }
+
+    return c.json({ data: student });
   }
 );
 
@@ -299,6 +363,117 @@ studentsRoute.patch(
     });
 
     return c.json({ data: { ok: true } });
+  }
+);
+
+/**
+ * PATCH /students/:id - ubah data murid (koreksi salah input).
+ *
+ * Ada karena sebelum ini SATU-SATUNYA cara membetulkan nama murid yang salah
+ * ketik adalah membuka SQL Editor produksi - jauh lebih berbahaya daripada
+ * kesalahan yang sedang diperbaiki (kejadian nyata 14 Agustus 2026: nama HAXI
+ * dan KHAILA tertukar dan harus ditukar lewat SQL langsung).
+ *
+ * Yang TIDAK bisa diubah lewat sini: nisn (identitas login - lihat catatan di
+ * updateStudentSchema), isActive/status (punya alur Kelulusan & Kenaikan
+ * Kelas sendiri), dan schoolId (pindah sekolah bukan operasi edit).
+ *
+ * Catatan penting soal gradeLevel: kalau className diubah tanpa gradeLevel
+ * ikut dikirim, gradeLevel DITURUNKAN ULANG dari kata pertama className -
+ * sama seperti saat pembuatan. Tanpa itu, memindahkan murid dari "VII A" ke
+ * "VIII A" akan meninggalkan gradeLevel di "VII", dan fitur Kelulusan &
+ * Kenaikan Kelas (yang menyaring berdasarkan gradeLevel) diam-diam salah
+ * memilih murid.
+ */
+studentsRoute.patch(
+  "/:id",
+  authMiddleware,
+  requirePermission(PERMISSIONS.STUDENT_MANAGE),
+  zValidator("json", updateStudentSchema),
+  async (c) => {
+    const db = c.get("db");
+    const admin = c.get("user");
+    const id = c.req.param("id");
+    const body = c.req.valid("json");
+
+    if (!UUID_REGEX.test(id)) {
+      return c.json(
+        { error: "not_found", message: "Murid tidak ditemukan", statusCode: 404 },
+        404
+      );
+    }
+
+    const [student] = await db.select().from(students).where(eq(students.id, id));
+    if (!student) {
+      return c.json(
+        { error: "not_found", message: "Murid tidak ditemukan", statusCode: 404 },
+        404
+      );
+    }
+
+    // Dibangun dari field yang BENAR-BENAR dikirim. `undefined` = tidak
+    // disentuh; string kosong = dikosongkan menjadi NULL.
+    const patch: Partial<typeof students.$inferInsert> = {};
+
+    if (body.nis !== undefined) patch.nis = body.nis.trim() || null;
+    if (body.fullName !== undefined) patch.fullName = body.fullName.trim();
+    if (body.gender !== undefined) patch.gender = body.gender || null;
+    if (body.birthDate !== undefined) patch.birthDate = body.birthDate || null;
+
+    if (body.className !== undefined) {
+      patch.className = body.className.trim();
+      patch.gradeLevel = body.gradeLevel?.trim() || classNameToGradeLevel(body.className);
+    } else if (body.gradeLevel !== undefined) {
+      patch.gradeLevel = body.gradeLevel.trim();
+    }
+
+    if (Object.keys(patch).length === 0) {
+      return c.json(
+        {
+          error: "bad_request",
+          message: "Tidak ada data yang diubah.",
+          statusCode: 400,
+        },
+        400
+      );
+    }
+
+    // NIS unik per sekolah (uniqueIndex students_nis_idx). Dicek lebih dulu
+    // supaya pesannya ramah, bukan error constraint mentah dari Postgres.
+    if (patch.nis) {
+      const [bentrok] = await db
+        .select({ id: students.id, fullName: students.fullName })
+        .from(students)
+        .where(and(eq(students.schoolId, student.schoolId), eq(students.nis, patch.nis)));
+      if (bentrok && bentrok.id !== id) {
+        return c.json(
+          {
+            error: "conflict",
+            message: `NIS ${patch.nis} sudah dipakai oleh ${bentrok.fullName}`,
+            statusCode: 409,
+          },
+          409
+        );
+      }
+    }
+
+    const [updated] = await db
+      .update(students)
+      .set(patch)
+      .where(eq(students.id, id))
+      .returning();
+
+    await db.insert(auditLogs).values({
+      userId: admin.sub,
+      action: "update",
+      tableName: "students",
+      recordId: id,
+      oldValue: student,
+      newValue: updated,
+      ipAddress: c.req.header("cf-connecting-ip") ?? null,
+    });
+
+    return c.json({ data: updated });
   }
 );
 

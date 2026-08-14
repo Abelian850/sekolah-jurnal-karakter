@@ -105,7 +105,7 @@ export default async function KepalaSekolahDashboardPage() {
         <StatCard label="Guru" value={counts.teachers} />
         <StatCard label="Guru Wali" value={counts.guruWali} />
         <StatCard
-          label="Rata-rata Nilai Karakter (30 hari)"
+          label="Rata-rata Capaian Kebiasaan (30 hari)"
           value={avgScore ?? "-"}
         />
       </div>
@@ -168,9 +168,12 @@ export default async function KepalaSekolahDashboardPage() {
       </div>
 
       <div className="glass-panel rounded-2xl p-6">
-        <h2 className="mb-1 text-base font-semibold">Rata-rata Nilai Karakter per Kelas</h2>
+        <h2 className="mb-1 text-base font-semibold">Rata-rata Capaian Kebiasaan per Kelas</h2>
         <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
-          Dari jurnal yang disetujui Guru Wali dalam 30 hari terakhir.
+          Persentase kebiasaan yang selesai dari jurnal yang disetujui Guru Wali
+          dalam 30 hari terakhir. Angka ini SENGAJA mentah (0-100%) agar selisih
+          antarkelas terlihat &mdash; berbeda dengan Nilai Karakter berskala
+          70-100 yang tampil ke murid, orang tua, dan rapor.
         </p>
         {avgScoreByClass.length === 0 ? (
           <p className="text-sm text-slate-500">Belum ada jurnal yang dinilai pada periode ini.</p>
