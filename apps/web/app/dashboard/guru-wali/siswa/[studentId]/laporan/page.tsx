@@ -125,6 +125,18 @@ export default async function LaporanSiswaPage({
           print-color-adjust: exact !important;
         }
         .cetak-utuh { break-inside: avoid; page-break-inside: avoid; }
+        /* 4. Pemadatan khusus cetak agar laporan satu murid muat dalam SATU
+           halaman A4. Sebelumnya tinggi konten ~1050px sedangkan area cetak
+           A4 dengan margin 12mm hanya ~1032px; karena blok tanda tangan
+           memakai break-inside:avoid, kelebihan ~18px itu mendorong SELURUH
+           blok tanda tangan (113px) ke halaman 2. Aturan di bawah memangkas
+           ~150px dan TIDAK mengubah tampilan di layar. */
+        .cetak-identitas { padding-top: 0.75rem !important; padding-bottom: 0.75rem !important; }
+        .cetak-subjudul { margin-top: 1rem !important; }
+        .cetak-baris-kebiasaan { grid-template-columns: 210px 1fr 48px !important; }
+        .cetak-foto { height: 8rem !important; }
+        .cetak-ttd { margin-top: 1.5rem !important; }
+        .cetak-ttd .cetak-garis-ttd { margin-top: 2.5rem !important; }
       }`}</style>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
@@ -159,9 +171,7 @@ export default async function LaporanSiswaPage({
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
               <h1 className="text-lg font-semibold">Laporan Jurnal Karakter Siswa</h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                {report.meta.schoolName}
-              </p>
+              <p className="text-sm text-slate-600 dark:text-slate-400">{report.meta.schoolName}</p>
             </div>
             <div className="text-right text-xs text-slate-500 dark:text-slate-400">
               <p>
@@ -172,7 +182,7 @@ export default async function LaporanSiswaPage({
           </div>
         </div>
 
-        <div className="flex items-center gap-4 py-5">
+        <div className="cetak-identitas flex items-center gap-4 py-5">
           {report.student.photoUrl ? (
             // Sengaja <img> biasa, bukan next/image: sumbernya diproksi lewat
             // /api/foto (bucket R2 privat) dan optimasi gambar Next tidak
@@ -220,7 +230,7 @@ export default async function LaporanSiswaPage({
           </div>
         </div>
 
-        <h2 className="mb-2 mt-6 text-sm font-semibold">Capaian 7 Kebiasaan</h2>
+        <h2 className="cetak-subjudul mb-2 mt-6 text-sm font-semibold">Capaian 7 Kebiasaan</h2>
         {report.habits.length === 0 ? (
           <p className="text-sm text-slate-500">
             Belum ada jurnal terkirim/disetujui pada periode ini.
@@ -232,7 +242,7 @@ export default async function LaporanSiswaPage({
               return (
                 <div
                   key={h.templateItemId}
-                  className="cetak-utuh grid grid-cols-[170px_1fr_48px] items-center gap-3 text-sm"
+                  className="cetak-utuh cetak-baris-kebiasaan grid grid-cols-[170px_1fr_48px] items-center gap-3 text-sm"
                 >
                   <span>{h.itemName}</span>
                   <div className="h-2 rounded bg-slate-100 dark:bg-slate-800">
@@ -250,13 +260,15 @@ export default async function LaporanSiswaPage({
           </div>
         )}
 
-        <h2 className="mb-2 mt-6 text-sm font-semibold">Bukti Foto Terakhir (Terverifikasi)</h2>
+        <h2 className="cetak-subjudul mb-2 mt-6 text-sm font-semibold">
+          Bukti Foto Terakhir (Terverifikasi)
+        </h2>
         {report.lastPhoto?.photoUrl ? (
           <div className="cetak-utuh flex flex-wrap items-start gap-4">
             <img
               src={report.lastPhoto.photoUrl}
               alt={`Bukti ${report.lastPhoto.itemName}`}
-              className="h-40 w-52 rounded-xl border border-slate-200 object-cover dark:border-slate-700"
+              className="cetak-foto h-40 w-52 rounded-xl border border-slate-200 object-cover dark:border-slate-700"
             />
             <div className="text-sm text-slate-600 dark:text-slate-400">
               <p>
@@ -266,8 +278,8 @@ export default async function LaporanSiswaPage({
                 · {formatDateID(report.lastPhoto.journalDate)}
               </p>
               <p className="mt-1">
-                Foto bukti paling baru dari jurnal yang sudah disetujui Guru Wali dalam
-                periode laporan.
+                Foto bukti paling baru dari jurnal yang sudah disetujui Guru Wali dalam periode
+                laporan.
               </p>
             </div>
           </div>
@@ -277,7 +289,7 @@ export default async function LaporanSiswaPage({
           </p>
         )}
 
-        <h2 className="mb-2 mt-6 text-sm font-semibold">Catatan Guru Wali</h2>
+        <h2 className="cetak-subjudul mb-2 mt-6 text-sm font-semibold">Catatan Guru Wali</h2>
         {report.lastNote?.note ? (
           <p className="whitespace-pre-wrap rounded-xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-800/60 dark:text-slate-300">
             {report.lastNote.note}
@@ -286,16 +298,16 @@ export default async function LaporanSiswaPage({
           <p className="text-sm text-slate-500">Belum ada catatan verifikasi pada periode ini.</p>
         )}
 
-        <div className="cetak-utuh mt-10 grid grid-cols-2 gap-8 pb-2 text-center text-sm">
+        <div className="cetak-utuh cetak-ttd mt-10 grid grid-cols-2 gap-8 pb-2 text-center text-sm">
           <div>
             <p className="text-slate-600 dark:text-slate-400">Mengetahui, Guru Wali</p>
-            <p className="mt-14 border-t border-slate-400 pt-2 font-medium">
+            <p className="cetak-garis-ttd mt-14 border-t border-slate-400 pt-2 font-medium">
               {report.meta.teacherName}
             </p>
           </div>
           <div>
             <p className="text-slate-600 dark:text-slate-400">Orang Tua / Wali Murid</p>
-            <p className="mt-14 border-t border-slate-400 pt-2 font-medium">
+            <p className="cetak-garis-ttd mt-14 border-t border-slate-400 pt-2 font-medium">
               (............................)
             </p>
           </div>
