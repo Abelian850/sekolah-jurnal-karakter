@@ -169,9 +169,24 @@ export default async function LaporanSiswaPage({
       <div className="glass-panel rounded-2xl p-8 print:p-0">
         <div className="border-b border-slate-300 pb-4 dark:border-slate-700">
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h1 className="text-lg font-semibold">Laporan Jurnal Karakter Siswa</h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400">{report.meta.schoolName}</p>
+            <div className="flex items-center gap-3">
+              {/* Logo sekolah dari /public/logo.png. Sengaja <img> biasa, bukan
+                  next/image: optimasi gambar Next tidak aktif pada deployment
+                  OpenNext/Workers dan <img> statis dijamin sudah termuat saat
+                  dialog print dibuka. Tinggi 44px sengaja lebih pendek dari
+                  tumpukan judul + nama sekolah (~48px) supaya header TIDAK
+                  bertambah tinggi dan laporan tetap muat satu halaman A4. */}
+              <img
+                src="/logo.png"
+                alt="Logo sekolah"
+                className="h-11 w-11 shrink-0 object-contain"
+              />
+              <div>
+                <h1 className="text-lg font-semibold">Laporan Jurnal Karakter Siswa</h1>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {report.meta.schoolName}
+                </p>
+              </div>
             </div>
             <div className="text-right text-xs text-slate-500 dark:text-slate-400">
               <p>
