@@ -36,22 +36,50 @@ export interface UpdateJournalItemPayload {
   answers?: Record<string, string> | null;
 }
 
+export type ActionResult = { ok: true } | { ok: false; message: string };
+
+/**
+ * Error dikembalikan sebagai nilai, bukan dilempar: di production Next.js
+ * menyembunyikan pesan error server action, jadi pesan API (mis. validasi)
+ * tak akan sampai ke murid.
+ */
+async function toResult(run: () => Promise<unknown>, fallback: string): Promise<ActionResult> {
+  try {
+    await run();
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, message: err instanceof Error ? err.message : fallback };
+  }
+}
+
+/**
+ * Sengaja TANPA revalidatePath: revalidatePath di server action membuat
+ * Worker yang sama merender ulang seluruh halaman jurnal di setiap klik
+ * Simpan (rawan melewati batas CPU Cloudflare Workers). Form sudah melacak
+ * nilai tersimpan di state klien, dan halaman ini dinamis sehingga selalu
+ * mengambil data baru saat dibuka lagi.
+ */
 export async function updateJournalItem(
   journalId: string,
   itemId: string,
   payload: UpdateJournalItemPayload
-) {
-  await apiFetch(`/journals/${journalId}/items/${itemId}`, {
-    method: "PATCH",
-    body: JSON.stringify(payload),
-  });
-  revalidatePath("/dashboard/peserta-didik/jurnal");
+): Promise<ActionResult> {
+  return toResult(
+    () =>
+      apiFetch(`/journals/${journalId}/items/${itemId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      }),
+    "Gagal menyimpan."
+  );
 }
 
-export async function submitJournal(journalId: string) {
-  await apiFetch(`/journals/${journalId}/submit`, { method: "PATCH" });
-  revalidatePath("/dashboard/peserta-didik/jurnal");
-  revalidatePath("/dashboard/peserta-didik/riwayat");
+/** Tanpa revalidatePath - klien memanggil router.refresh() sebagai request terpisah. */
+export async function submitJournal(journalId: string): Promise<ActionResult> {
+  return toResult(
+    () => apiFetch(`/journals/${journalId}/submit`, { method: "PATCH" }),
+    "Gagal mengirim jurnal."
+  );
 }
 
 /**

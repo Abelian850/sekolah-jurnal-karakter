@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   findHabitQuestionSet,
   visibleQuestions,
@@ -189,7 +190,11 @@ function ItemRow({
 
     startTransition(async () => {
       try {
-        await updateJournalItem(journalId, item.id, payload);
+        const result = await updateJournalItem(journalId, item.id, payload);
+        if (!result.ok) {
+          setError(result.message);
+          return;
+        }
         setSaved(true);
         onSaved(item.id, {
           status: savedStatus,
@@ -448,6 +453,8 @@ export function JournalItemsForm({
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
+  const router = useRouter();
 
   // Nilai TERSIMPAN per item (server-side truth yang kita ketahui).
   // Diinisialisasi dari props, diperbarui setiap kali satu baris sukses
@@ -529,9 +536,19 @@ export function JournalItemsForm({
     }
     startTransition(async () => {
       try {
-        await submitJournal(journalId);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Gagal mengirim jurnal.");
+        const result = await submitJournal(journalId);
+        if (!result.ok) {
+          setError(result.message);
+          return;
+        }
+        setSubmitted(true);
+        // Render ulang halaman sebagai request terpisah dari penyimpanan.
+        router.refresh();
+      } catch {
+        // Respons terputus - jurnal bisa jadi sudah terkirim.
+        setError(
+          "Server lambat merespons. Jurnal mungkin sudah terkirim — muat ulang halaman untuk memastikan."
+        );
       }
     });
   }
@@ -567,10 +584,10 @@ export function JournalItemsForm({
       <div className="mt-4 flex items-center gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
         <button
           onClick={handleSubmit}
-          disabled={isPending}
+          disabled={isPending || submitted}
           className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-60"
         >
-          {isPending ? "Mengirim..." : "Kirim Jurnal"}
+          {submitted ? "Terkirim" : isPending ? "Mengirim..." : "Kirim Jurnal"}
         </button>
         <p className="text-xs text-slate-500">
           Semua kebiasaan wajib diisi &amp; minimal satu foto bukti. Pastikan setiap item sudah
