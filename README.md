@@ -44,7 +44,7 @@ Aplikasi jurnal karakter dan monitoring peserta didik berbasis relasi **Guru Wal
 
 | Layer | Teknologi |
 |---|---|
-| Frontend | Next.js 15, TypeScript, Tailwind CSS, shadcn/ui |
+| Frontend | Next.js 16, TypeScript, Tailwind CSS, shadcn/ui |
 | Backend | Hono di Cloudflare Workers |
 | Database | Neon PostgreSQL (serverless) |
 | ORM | Drizzle ORM |
