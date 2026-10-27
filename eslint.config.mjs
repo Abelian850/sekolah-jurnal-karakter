@@ -25,14 +25,5 @@ export default tseslint.config(
       "@typescript-eslint/no-explicit-any": "warn",
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
-  },
-  {
-    // Skrip CLI database (dijalankan via tsx di terminal/CI, bukan di Worker):
-    // console.log memang keluaran progres yang diinginkan.
-    files: ["apps/api/src/db/*.ts"],
-    ignores: ["apps/api/src/db/client.ts", "apps/api/src/db/schema.ts"],
-    rules: {
-      "no-console": "off",
-    },
   }
 );

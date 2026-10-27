@@ -33,7 +33,7 @@ export function GuruWaliNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="glass-panel mb-6 flex gap-1 overflow-x-auto rounded-2xl p-1.5">
+    <nav className="glass-panel mb-6 flex gap-1 rounded-2xl p-2">
       {NAV_ITEMS.map((item) => {
         const isActive = item.match(pathname);
 
@@ -41,10 +41,10 @@ export function GuruWaliNav() {
           <Link
             key={item.href}
             href={item.href}
-            className={`shrink-0 whitespace-nowrap rounded-xl px-4 py-2 text-sm transition ${
+            className={`rounded-full px-4 py-2 text-sm transition ${
               isActive
-                ? "bg-brand-600 font-semibold text-white shadow-sm shadow-brand-600/30"
-                : "font-medium text-slate-600 hover:bg-brand-50 hover:text-brand-700"
+                ? "bg-brand-600 font-medium text-white"
+                : "text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
             }`}
           >
             {item.label}

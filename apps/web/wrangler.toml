@@ -8,11 +8,6 @@ compatibility_flags = ["nodejs_compat", "global_fetch_strictly_public"]
 # dijelaskan di docs/deployment.md. Ini juga berarti frontend kini berjalan
 # di runtime Node.js Workers (nodejs_compat), bukan Edge Runtime terbatas.
 
-# Aktifkan Workers Logs agar error (mis. "Exceeded CPU Time Limits") bisa
-# ditelusuri di dashboard. Masih dalam kuota gratis.
-[observability]
-enabled = true
-
 [assets]
 directory = ".open-next/assets"
 binding = "ASSETS"
@@ -48,6 +43,3 @@ service = "sjk-web-production"
 [[env.production.r2_buckets]]
 binding = "NEXT_INC_CACHE_R2_BUCKET"
 bucket_name = "sjk-web-cache"
-
-[env.production.observability]
-enabled = true
