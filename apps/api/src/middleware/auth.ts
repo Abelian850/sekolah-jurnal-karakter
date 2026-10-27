@@ -25,15 +25,18 @@ export const authMiddleware = createMiddleware<{ Bindings: Env; Variables: Varia
     const token = authHeader.slice("Bearer ".length);
     const secret = new TextEncoder().encode(c.env.AUTH_SECRET);
 
+    // next() sengaja di luar try: error dari handler hilir tidak boleh
+    // tersamarkan menjadi 401 "token tidak valid".
+    let payload;
     try {
-      const { payload } = await jwtVerify(token, secret);
-      c.set("user", payload as unknown as AppJwtPayload);
-      await next();
-    } catch (err) {
+      ({ payload } = await jwtVerify(token, secret));
+    } catch {
       return c.json(
         { error: "unauthorized", message: "Token tidak valid atau kedaluwarsa", statusCode: 401 },
         401
       );
     }
+    c.set("user", payload as unknown as AppJwtPayload);
+    await next();
   }
 );
