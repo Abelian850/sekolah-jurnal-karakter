@@ -2,12 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Aplikasi belum punya mode gelap yang diaktifkan (darkMode: "class" dan
+   kelas .dark tidak pernah dipasang), jadi kontrol form bawaan browser
+   dikunci ke terang agar tidak tampil gelap di atas kartu putih. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
-/* Kartu solid modern-minimal (redesign Fase 8; sebelumnya glassmorphism).
-   Nama kelas .glass-panel dipertahankan karena dipakai di 40+ berkas. */
+@layer base {
+  body {
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
+  }
+
+  /* Cincin fokus seragam untuk seluruh isian form di dashboard. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+  select:focus,
+  textarea:focus {
+    box-shadow: 0 0 0 3px rgb(36 73 201 / 0.14);
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid #2449c9;
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+}
+
+/* Kartu solid. Nama kelas .glass-panel dipertahankan karena dipakai di
+   40+ berkas dashboard. */
 .glass-panel {
-  @apply border border-slate-200/70 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900;
+  @apply border border-slate-200/80 bg-white dark:border-slate-800 dark:bg-slate-900;
+  box-shadow:
+    0 1px 2px rgb(14 27 69 / 0.04),
+    0 4px 16px -8px rgb(14 27 69 / 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
