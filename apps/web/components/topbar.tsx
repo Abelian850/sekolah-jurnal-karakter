@@ -1,19 +1,9 @@
 import Link from "next/link";
 import { auth, signOut } from "@/lib/auth";
-import { SchoolLogo } from "@/components/brand-mark";
-
-const ROLE_LABEL: Record<string, string> = {
-  admin: "Admin Sekolah",
-  kepala_sekolah: "Kepala Sekolah",
-  guru: "Guru",
-  guru_wali: "Guru Wali",
-  peserta_didik: "Murid",
-  orang_tua: "Orang Tua",
-};
 
 /**
- * Topbar dashboard: logo + sapaan di kiri, chip peran + Ubah Sandi +
- * Keluar di kanan.
+ * Topbar — redesign Fase 8: sapaan hangat di kiri, chip avatar (inisial)
+ * + peran + tombol Keluar di kanan, di atas kartu putih bersih.
  */
 export async function Topbar() {
   const session = await auth();
@@ -22,33 +12,28 @@ export async function Topbar() {
   // Fallback ke email untuk admin (tanpa profil) atau sesi lama yang
   // JWT-nya belum memuat name (perlu login ulang agar terisi).
   const displayName = session?.user?.name || email;
-  const rawRole = session?.user?.role ?? "";
-  const role = ROLE_LABEL[rawRole] ?? rawRole.replace("_", " ");
+  const role = session?.user?.role?.replace("_", " ") ?? "";
   const initial = (displayName[0] ?? "?").toUpperCase();
 
   return (
-    <header className="glass-panel relative mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3 overflow-hidden rounded-2xl px-4 py-3 sm:px-5">
-      <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-gold-400 to-brand-600" />
-      <div className="flex min-w-0 items-center gap-3">
-        <SchoolLogo size={36} className="hidden sm:block" />
-        <div className="min-w-0">
-          <p className="text-xs text-slate-500">Selamat datang,</p>
-          <p className="truncate text-sm font-bold text-brand-950">{displayName}</p>
-        </div>
+    <header className="glass-panel mb-6 flex items-center justify-between gap-4 rounded-2xl px-6 py-3">
+      <div className="min-w-0">
+        <p className="text-xs text-slate-500">Selamat datang 👋</p>
+        <p className="truncate text-sm font-semibold">{displayName}</p>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        <span className="hidden items-center gap-2 rounded-full bg-brand-50 py-1 pl-1 pr-3 text-xs font-semibold text-brand-700 sm:flex">
+      <div className="flex shrink-0 items-center gap-3">
+        <div className="flex items-center gap-2.5">
           <span
             aria-hidden
-            className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-[11px] font-bold text-white"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-900 dark:text-brand-200"
           >
             {initial}
           </span>
-          {role}
-        </span>
+          <span className="hidden text-xs capitalize text-slate-500 sm:block">{role}</span>
+        </div>
         <Link
           href="/dashboard/profil"
-          className="rounded-full border border-slate-200 px-3.5 py-1.5 text-sm font-medium text-slate-600 transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+          className="rounded-full border border-slate-200 px-4 py-1.5 text-sm font-medium text-slate-600 transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:bg-brand-900"
         >
           Ubah Sandi
         </Link>
@@ -58,7 +43,7 @@ export async function Topbar() {
             await signOut({ redirectTo: "/login" });
           }}
         >
-          <button className="rounded-full border border-slate-200 px-3.5 py-1.5 text-sm font-medium text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600">
+          <button className="rounded-full border border-slate-200 px-4 py-1.5 text-sm font-medium text-slate-600 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-red-900 dark:hover:bg-red-950">
             Keluar
           </button>
         </form>

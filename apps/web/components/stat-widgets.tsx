@@ -6,10 +6,9 @@
 
 export function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="glass-panel relative overflow-hidden rounded-2xl p-4">
-      <span aria-hidden className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-brand-600 via-brand-400 to-gold-400" />
-      <p className="text-xs font-medium text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-extrabold tabular-nums tracking-tight text-brand-950">{value}</p>
+    <div className="glass-panel rounded-2xl p-4">
+      <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+      <p className="mt-1 text-2xl font-semibold">{value}</p>
     </div>
   );
 }

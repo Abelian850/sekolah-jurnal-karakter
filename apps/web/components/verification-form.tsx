@@ -1,8 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import {
   verifyJournal,
   type VerifyJournalPayload,
@@ -40,9 +38,6 @@ const CONFIRM_MESSAGES: Record<VerifyJournalPayload["status"], string> = {
   ditolak: "Tolak jurnal ini? Keputusan ini final dan murid tidak bisa memperbaikinya.",
 };
 
-const UNCERTAIN_MESSAGE =
-  "Server lambat merespons. Verifikasi mungkin sudah tersimpan — muat ulang halaman untuk memastikan sebelum mencoba lagi.";
-
 /**
  * Form verifikasi jurnal oleh Guru Wali. Validasi di sini hanya untuk UX -
  * aturan sesungguhnya (catatan wajib saat tolak/revisi) ditegakkan lagi oleh
@@ -54,8 +49,6 @@ export function VerificationForm({ journalId }: { journalId: string }) {
   const [note, setNote] = useState("");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const router = useRouter();
 
   function handleSubmit() {
     setError(null);
@@ -68,32 +61,18 @@ export function VerificationForm({ journalId }: { journalId: string }) {
 
     startTransition(async () => {
       try {
-        const result = await verifyJournal(journalId, {
+        await verifyJournal(journalId, {
           status,
           note: note.trim() || null,
         });
-        if (!result.ok) {
-          setError(result.message);
-          return;
-        }
-        setSaved(true);
-        // Request terpisah dari penyimpanan (lihat komentar di actions.ts).
-        // Halaman dashboard dinamis, jadi datanya selalu diambil ulang.
-        router.push("/dashboard/guru-wali");
-      } catch {
-        // Respons terputus (jaringan/Worker) - data bisa jadi sudah tersimpan.
-        setError(UNCERTAIN_MESSAGE);
+      } catch (err) {
+        // redirect() dari server action dilempar sebagai error khusus Next -
+        // jangan ditangkap sebagai kegagalan.
+        if (err && typeof err === "object" && "digest" in err) throw err;
+        setError(err instanceof Error ? err.message : "Gagal menyimpan verifikasi.");
       }
     });
   }
-
-  // Jaring pengaman: jika respons tak kunjung datang, beri tahu guru alih-alih
-  // membiarkan tombol macet di "Menyimpan..." tanpa penjelasan.
-  useEffect(() => {
-    if (!isPending || saved) return;
-    const timer = setTimeout(() => setError(UNCERTAIN_MESSAGE), 15_000);
-    return () => clearTimeout(timer);
-  }, [isPending, saved]);
 
   return (
     <div className="mt-6 border-t border-slate-100 pt-4 dark:border-slate-800">
@@ -152,20 +131,12 @@ export function VerificationForm({ journalId }: { journalId: string }) {
 
       <button
         onClick={handleSubmit}
-        disabled={isPending || saved}
+        disabled={isPending}
         className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500 disabled:opacity-60"
       >
-        {saved ? "Tersimpan" : isPending ? "Menyimpan..." : "Simpan Verifikasi"}
+        {isPending ? "Menyimpan..." : "Simpan Verifikasi"}
       </button>
 
-      {saved && (
-        <p className="mt-2 text-sm text-green-600">
-          Verifikasi tersimpan. Membuka daftar jurnal&hellip;{" "}
-          <Link href="/dashboard/guru-wali" className="underline">
-            Buka sekarang
-          </Link>
-        </p>
-      )}
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>
   );
