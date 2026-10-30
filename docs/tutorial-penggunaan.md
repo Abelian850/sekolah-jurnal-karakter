@@ -237,6 +237,15 @@ untuk melihat detail isiannya.
      Keputusan ini final; siswa tidak bisa mengubahnya lagi.
 4. Tab **Riwayat Verifikasi** menampilkan 100 keputusan terakhir Anda
    beserta nilai yang diberikan.
+5. **Setujui Semua** *(pembaruan Oktober 2026)* — tombol hijau di pojok
+   kanan panel **Menunggu Verifikasi** menyetujui sekaligus semua jurnal
+   yang sedang menunggu. Hasilnya sama dengan menekan **Setujui** satu per
+   satu: nilai karakter dihitung otomatis per jurnal, siswa & orang tua
+   tetap menerima notifikasi per jurnal, dan keputusannya final. Diproses
+   per 100 jurnal (tombol menampilkan kemajuannya). Karena isian dan foto
+   bukti tidak diperiksa satu per satu, periksa dulu secara manual jurnal
+   yang Anda curigai perlu **revisi** atau **ditolak** sebelum memakai
+   tombol ini.
 
 Keamanan: Guru Wali hanya bisa melihat dan memverifikasi jurnal milik siswa
 binaan **aktif**-nya — dicek ulang di server lewat relasi penugasan, bukan
