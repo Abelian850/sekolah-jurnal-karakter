@@ -4,6 +4,7 @@ import { formatDateID, getTodayDateWIB } from "@/lib/date";
 import { StatusCalendar, CalendarLegend, type CalendarMark } from "@/components/status-calendar";
 import { StatCard, Bar } from "@/components/stat-widgets";
 import { DownloadGuruWaliReport } from "@/components/download-guru-wali-report";
+import { ApproveAllButton } from "@/components/approve-all-button";
 
 interface PendingJournal {
   id: string;
@@ -265,10 +266,15 @@ export default async function GuruWaliDashboardPage({
       </div>
 
       <div className="glass-panel rounded-2xl p-6">
-        <h2 className="mb-1 text-base font-semibold">Menunggu Verifikasi</h2>
-        <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
-          Jurnal murid perwalian yang sudah dikirim dan menunggu diperiksa, terlama dulu.
-        </p>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="mb-1 text-base font-semibold">Menunggu Verifikasi</h2>
+            <p className="text-sm text-slate-600 dark:text-slate-400">
+              Jurnal murid perwalian yang sudah dikirim dan menunggu diperiksa, terlama dulu.
+            </p>
+          </div>
+          {journals.length > 0 && <ApproveAllButton count={journals.length} />}
+        </div>
 
         {journals.length === 0 ? (
           <p className="text-sm text-slate-500">
