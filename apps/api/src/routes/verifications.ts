@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
-import { eq, and, asc, desc, gte, lte, sql } from "drizzle-orm";
+import { eq, and, asc, desc, gte, lte, sql, inArray } from "drizzle-orm";
 import { PERMISSIONS, computeCharacterScore, toReportScore } from "@sjk/shared";
 import { authMiddleware } from "../middleware/auth";
 import { requirePermission } from "../middleware/rbac";
@@ -623,5 +623,180 @@ verificationsRoute.post(
     });
 
     return c.json({ data: { verification, journal: updatedJournal } }, 201);
+  }
+);
+
+/**
+ * Jumlah maksimum jurnal yang disetujui dalam SATU panggilan /approve-all.
+ * Sengaja dibatasi: Worker gratis punya batas CPU per request, dan jumlah
+ * baris notifikasi ikut membengkak (murid + semua orang tua). Klien cukup
+ * memanggil ulang selama `remaining` > 0 (lihat components/approve-all-button.tsx).
+ */
+const APPROVE_ALL_CHUNK = 100;
+
+/**
+ * POST /verifications/approve-all
+ * Menyetujui SEKALIGUS jurnal "submitted" milik murid perwalian aktif guru
+ * yang sedang login (maks APPROVE_ALL_CHUNK per panggilan, terlama dulu).
+ *
+ * Efek per jurnal identik dengan POST /journals/:id berstatus "disetujui":
+ * nilai karakter dihitung otomatis (computeCharacterScore), baris
+ * verifications di-UPSERT, journals.status = approved, notifikasi ke murid +
+ * orang tua tertaut. Bedanya hanya pada cara eksekusi: semua dibaca dengan
+ * 3 query lalu ditulis dengan SATU db.batch (satu transaksi Neon) agar
+ * jumlah subrequest Worker tetap kecil berapa pun jumlah jurnalnya, dan
+ * tidak ada keadaan setengah jadi (jurnal approved tanpa baris verifikasi).
+ *
+ * Tidak menerima parameter apa pun dari klien: daftar jurnal diturunkan dari
+ * teacher_student milik guru di JWT, sama seperti endpoint lain di file ini.
+ */
+verificationsRoute.post(
+  "/approve-all",
+  authMiddleware,
+  requirePermission(PERMISSIONS.JOURNAL_VERIFY),
+  async (c) => {
+    const db = c.get("db");
+    const user = c.get("user");
+
+    const teacher = await findOwnTeacher(db, user.sub);
+    if (!teacher) return c.json(notFoundTeacher, 404);
+
+    const binaanJoin = and(
+      eq(teacherStudent.studentId, journals.studentId),
+      eq(teacherStudent.isActive, true)
+    );
+
+    const rows = await db
+      .select({
+        id: journals.id,
+        journalDate: journals.journalDate,
+        studentId: students.id,
+        studentName: students.fullName,
+        studentUserId: students.userId,
+      })
+      .from(journals)
+      .innerJoin(students, eq(journals.studentId, students.id))
+      .innerJoin(teacherStudent, binaanJoin)
+      .where(and(eq(teacherStudent.teacherId, teacher.id), eq(journals.status, "submitted")))
+      .orderBy(asc(journals.submittedAt), asc(journals.id))
+      .limit(APPROVE_ALL_CHUNK);
+
+    // teacher_student tidak punya unique (teacher, student, aktif), jadi
+    // penugasan ganda bisa menggandakan baris - buang duplikat per jurnal.
+    const pending = [...new Map(rows.map((r) => [r.id, r])).values()];
+
+    if (pending.length === 0) {
+      return c.json({ data: { approved: 0, remaining: 0 } });
+    }
+
+    const journalIds = pending.map((j) => j.id);
+    const studentIds = [...new Set(pending.map((j) => j.studentId))];
+
+    const itemRows = await db
+      .select({
+        journalId: journalItems.journalId,
+        itemName: journalTemplateItems.itemName,
+        status: journalItems.status,
+      })
+      .from(journalItems)
+      .innerJoin(journalTemplateItems, eq(journalItems.templateItemId, journalTemplateItems.id))
+      .where(inArray(journalItems.journalId, journalIds));
+
+    const itemsByJournal = new Map<string, { itemName: string; status: string }[]>();
+    for (const it of itemRows) {
+      const list = itemsByJournal.get(it.journalId) ?? [];
+      list.push({ itemName: it.itemName, status: it.status });
+      itemsByJournal.set(it.journalId, list);
+    }
+
+    const parentRows = await db
+      .select({ studentId: studentParent.studentId, userId: parents.userId })
+      .from(studentParent)
+      .innerJoin(parents, eq(studentParent.parentId, parents.id))
+      .where(inArray(studentParent.studentId, studentIds));
+
+    const parentsByStudent = new Map<string, string[]>();
+    for (const p of parentRows) {
+      const list = parentsByStudent.get(p.studentId) ?? [];
+      list.push(p.userId);
+      parentsByStudent.set(p.studentId, list);
+    }
+
+    const verifiedAt = new Date();
+    const verificationRows: (typeof verifications.$inferInsert)[] = [];
+    const notificationRows: (typeof notifications.$inferInsert)[] = [];
+
+    for (const j of pending) {
+      const score = computeCharacterScore(itemsByJournal.get(j.id) ?? []);
+      verificationRows.push({
+        journalId: j.id,
+        teacherId: teacher.id,
+        status: "disetujui",
+        note: null,
+        characterScore: score,
+        verifiedAt,
+      });
+
+      // Teks sama persis dengan jalur verifikasi satuan di atas.
+      const message = `Jurnal tanggal ${j.journalDate} disetujui oleh ${teacher.fullName}${
+        score != null ? ` dengan nilai karakter ${toReportScore(score)}` : ""
+      }.`;
+      notificationRows.push({
+        userId: j.studentUserId,
+        type: "disetujui",
+        title: "Jurnal disetujui",
+        message,
+      });
+      for (const parentUserId of parentsByStudent.get(j.studentId) ?? []) {
+        notificationRows.push({
+          userId: parentUserId,
+          type: "disetujui",
+          title: "Jurnal disetujui",
+          message: `[${j.studentName}] ${message}`,
+        });
+      }
+    }
+
+    // notificationRows tidak pernah kosong: setiap jurnal minimal punya satu
+    // penerima (students.user_id NOT NULL).
+    await db.batch([
+      db
+        .update(journals)
+        .set({ status: "approved" })
+        .where(and(inArray(journals.id, journalIds), eq(journals.status, "submitted"))),
+      db
+        .insert(verifications)
+        .values(verificationRows)
+        .onConflictDoUpdate({
+          target: verifications.journalId,
+          set: {
+            teacherId: sql`excluded.teacher_id`,
+            status: sql`excluded.status`,
+            note: sql`excluded.note`,
+            characterScore: sql`excluded.character_score`,
+            verifiedAt: sql`excluded.verified_at`,
+          },
+        }),
+      db.insert(notifications).values(notificationRows),
+      db.insert(auditLogs).values({
+        userId: user.sub,
+        action: "verify_bulk",
+        tableName: "verifications",
+        recordId: null,
+        oldValue: { journalStatus: "submitted", journalIds },
+        newValue: { status: "disetujui", count: journalIds.length },
+        ipAddress: c.req.header("cf-connecting-ip") ?? null,
+      }),
+    ]);
+
+    const [rest] = await db
+      .select({ count: sql<number>`count(distinct ${journals.id})::int` })
+      .from(journals)
+      .innerJoin(teacherStudent, binaanJoin)
+      .where(and(eq(teacherStudent.teacherId, teacher.id), eq(journals.status, "submitted")));
+
+    return c.json({
+      data: { approved: journalIds.length, remaining: rest?.count ?? 0 },
+    });
   }
 );
